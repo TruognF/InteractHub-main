@@ -1,0 +1,396 @@
+/* Create Group Page Styles */
+
+.create-group-wrapper {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e0d5f0 0%, #f5f0ff 100%);
+}
+
+.create-group-container {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 20px;
+  max-width: 1200px;
+  margin: 20px auto;
+  padding: 0 20px;
+}
+
+/* Sidebar */
+.create-group-sidebar {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  height: fit-content;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-section {
+  margin-bottom: 20px;
+}
+
+.sidebar-title {
+  margin: 0 0 15px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #333;
+}
+
+/* Member Item */
+.member-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  background: #f5f0ff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.member-item:hover {
+  background: #e0d5f0;
+}
+
+.member-item.current-member {
+  background: #f0e6ff;
+  margin-bottom: 15px;
+}
+
+.member-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.member-info {
+  flex: 1;
+}
+
+.member-name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+}
+
+.member-status {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: #999;
+}
+
+/* Inputs */
+.group-name-input {
+  width: 100%;
+  padding: 10px;
+  margin: 15px 0;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.group-name-input:focus {
+  outline: none;
+  border-color: #6b4fc7;
+  box-shadow: 0 0 0 3px rgba(107, 79, 199, 0.1);
+}
+
+/* Buttons */
+.btn-invite {
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+  background: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  color: #333;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn-invite:hover {
+  background: #e0e0e0;
+}
+
+.btn-create-group {
+  width: 100%;
+  padding: 12px;
+  margin-top: 20px;
+  background: #a0d8ff;
+  border: none;
+  border-radius: 8px;
+  color: #333;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-create-group:hover {
+  background: #7fcce6;
+}
+
+/* Main Content */
+.create-group-main {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Group Cover */
+.group-cover {
+  width: 100%;
+  height: 200px;
+  background: linear-gradient(135deg, #e0d5f0 0%, #f5f0ff 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.group-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cover-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.cover-image-input {
+  width: 80%;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.cover-image-input:focus {
+  outline: none;
+  background: white;
+}
+
+/* Group Cover Buttons */
+.cover-upload-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.cover-file-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  color: #333;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.cover-file-button:hover {
+  background: white;
+}
+
+.cover-file-button.small {
+  padding: 8px 14px;
+  font-size: 12px;
+}
+
+.cover-file-input {
+  display: none;
+}
+
+.cover-action-wrapper {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.cover-remove-button {
+  padding: 10px 16px;
+  background: #ffe4e6;
+  border: 1px solid #f5c2c7;
+  border-radius: 10px;
+  color: #b02a37;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.cover-remove-button:hover {
+  background: #ffccd5;
+}
+
+/* Group Info */
+.group-info-section {
+  border-top: 1px solid #f0f0f0;
+  padding-top: 20px;
+}
+
+.group-display-name {
+  margin: 0 0 8px;
+  font-size: 24px;
+  font-weight: 700;
+  color: #333;
+}
+
+.group-member-count {
+  margin: 0 0 20px;
+  font-size: 13px;
+  color: #666;
+}
+
+/* Tabs */
+.group-tabs {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 12px;
+}
+
+.tab {
+  padding: 8px 0;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #666;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  margin-bottom: -12px;
+}
+
+.tab:hover {
+  color: #333;
+}
+
+.tab.active {
+  color: #333;
+  border-bottom-color: #333;
+}
+
+.tab-menu {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  margin-left: auto;
+  color: #666;
+  transition: all 0.3s ease;
+}
+
+.tab-menu:hover {
+  color: #333;
+}
+
+/* Comment Section */
+.comment-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.comment-input-wrapper {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.comment-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #f0e6ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.comment-input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.comment-input:focus {
+  outline: none;
+  border-color: #6b4fc7;
+  box-shadow: 0 0 0 3px rgba(107, 79, 199, 0.1);
+}
+
+.btn-submit-comment {
+  align-self: flex-start;
+  padding: 10px 20px;
+  background: #7fb8d4;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-submit-comment:hover {
+  background: #6a9bb8;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .create-group-container {
+    grid-template-columns: 1fr;
+  }
+
+  .create-group-sidebar {
+    display: none;
+  }
+
+  .group-cover {
+    height: 150px;
+  }
+
+  .group-display-name {
+    font-size: 20px;
+  }
+}

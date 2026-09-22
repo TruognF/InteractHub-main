@@ -1,0 +1,6 @@
+Response Wrapper (quick win)
+Exception Handling (nâng độ tin cậy)
+CORS (để frontend connect)
+Response Types (documentation)
+Unit Tests (trước khi deploy)
+Azure Deployment (cuối cùng)
