@@ -101,7 +101,7 @@ export default function AdminDashboard() {
             <ul>
               <li>Nội dung gây hại</li>
               <li>Thư rác</li>
-              <li>Qu騷rối/Tấn công cá nhân</li>
+              <li>Quấy rối/Tấn công cá nhân</li>
               <li>Nội dung bạo lực</li>
               <li>Nội dung người lớn</li>
               <li>Tin giả/Sai lệch thông tin</li>

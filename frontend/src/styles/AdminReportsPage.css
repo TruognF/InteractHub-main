@@ -226,6 +226,30 @@
   transform: translateY(0);
 }
 
+.btn-delete {
+  padding: 0.5rem 0.8rem;
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-delete:hover {
+  background: #fca5a5;
+  color: #991b1b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+}
+
+.btn-delete:active {
+  transform: translateY(0);
+}
+
 .btn-action {
   padding: 0.4rem 0.8rem;
   border: none;

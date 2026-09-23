@@ -697,3 +697,105 @@ export async function rejectReport(reportId) {
   const data = await handleResponse(response);
   return data?.Data || null;
 }
+
+export async function deleteReport(reportId) {
+  const token = localStorage.getItem('adminToken');
+  const response = await fetch(`${API_BASE}/postreports/${reportId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+
+  return await handleResponse(response);
+}
+
+// ===== ADMIN USER MANAGEMENT API =====
+
+export async function getAllUsersWithRoles() {
+  const token = localStorage.getItem('adminToken');
+  const response = await fetch(`${API_BASE}/admin/users-with-roles`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+
+  const data = await handleResponse(response);
+  return data?.Data || [];
+}
+
+export async function getUserWithRoles(userId) {
+  const token = localStorage.getItem('adminToken');
+  const response = await fetch(`${API_BASE}/admin/user/${userId}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+
+  const data = await handleResponse(response);
+  return data?.Data || null;
+}
+
+export async function assignRoleToUser(userId, role) {
+  const token = localStorage.getItem('adminToken');
+  const response = await fetch(`${API_BASE}/admin/assign-role`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ userId, role })
+  });
+
+  return await handleResponse(response);
+}
+
+export async function removeRoleFromUser(userId, role) {
+  const token = localStorage.getItem('adminToken');
+  const response = await fetch(`${API_BASE}/admin/remove-role`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ userId, role })
+  });
+
+  return await handleResponse(response);
+}
+
+export async function toggleLockUser(userId) {
+  const token = localStorage.getItem('adminToken');
+  const response = await fetch(`${API_BASE}/admin/toggle-lock-user`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ userId })
+  });
+
+  return await handleResponse(response);
+}
+
+export async function resetUserPassword(userId, newPassword) {
+  const token = localStorage.getItem('adminToken');
+  const response = await fetch(`${API_BASE}/admin/reset-user-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ userId, newPassword })
+  });
+
+  return await handleResponse(response);
+}
+
+export async function deleteUser(userId) {
+  const token = localStorage.getItem('adminToken');
+  const response = await fetch(`${API_BASE}/admin/delete-user/${userId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+
+  return await handleResponse(response);
+}

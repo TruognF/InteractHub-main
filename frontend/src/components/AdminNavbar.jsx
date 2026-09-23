@@ -13,7 +13,7 @@ export default function AdminNavbar({ onMenuClick, onLogout }) {
           </button>
           <div className="navbar-brand">
             <span className="navbar-icon">⚙️</span>
-            <h1>Admin Dashboard</h1>
+            <h1>Admin Panel</h1>
           </div>
         </div>
 

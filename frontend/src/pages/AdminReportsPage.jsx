@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getAllReports } from '../api';
+import { getAllReports, deleteReport } from '../api';
 import AdminLayout from '../components/AdminLayout';
 import ReportDetailModal from '../components/ReportDetailModal';
 import '../styles/AdminReportsPage.css';
@@ -57,15 +57,32 @@ export default function AdminReportsPage() {
   };
 
   const handleApprove = (reportId) => {
-    // Remove the report from the list when approved
-    setReports(reports.filter(r => r.Id !== reportId));
-    applyFilter(reports.filter(r => r.Id !== reportId), statusFilter);
+    // Giữ lại báo cáo và cập nhật trạng thái thành Đã duyệt (Status = 1)
+    const updated = reports.map(r => r.Id === reportId ? { ...r, Status: 1 } : r);
+    setReports(updated);
+    applyFilter(updated, statusFilter);
   };
 
   const handleReject = (reportId) => {
     // Update the report status to rejected (2)
-    setReports(reports.map(r => r.Id === reportId ? { ...r, Status: 2 } : r));
-    applyFilter(reports.map(r => r.Id === reportId ? { ...r, Status: 2 } : r), statusFilter);
+    const updated = reports.map(r => r.Id === reportId ? { ...r, Status: 2 } : r);
+    setReports(updated);
+    applyFilter(updated, statusFilter);
+  };
+
+  const handleDelete = async (reportId) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa báo cáo #${reportId} này không?`)) return;
+    try {
+      await deleteReport(reportId);
+      const updated = reports.filter(r => r.Id !== reportId);
+      setReports(updated);
+      applyFilter(updated, statusFilter);
+      if (selectedReport?.Id === reportId) {
+        setSelectedReport(null);
+      }
+    } catch (err) {
+      setError('Lỗi khi xóa báo cáo: ' + (err.message || 'Không thể xóa'));
+    }
   };
 
   const ReasonMap = {
@@ -118,6 +135,7 @@ export default function AdminReportsPage() {
                   <th>ID</th>
                   <th>Lý do</th>
                   <th>Chi tiết</th>
+                  <th>Người báo cáo</th>
                   <th>Trạng thái</th>
                   <th>Ngày tạo</th>
                   <th>Hành động</th>
@@ -132,6 +150,11 @@ export default function AdminReportsPage() {
                       {report.Detail?.substring(0, 50) || 'N/A'}
                       {report.Detail?.length > 50 ? '...' : ''}
                     </td>
+                    <td className="report-reporter">
+                      {report.ReporterUser
+                        ? (report.ReporterUser.FullName || report.ReporterUser.UserName)
+                        : '—'}
+                    </td>
                     <td>
                       <ReportStatusBadge status={report.Status} />
                     </td>
@@ -139,18 +162,20 @@ export default function AdminReportsPage() {
                       {new Date(report.CreatedAt).toLocaleDateString('vi-VN')}
                     </td>
                     <td className="report-actions">
-                      {report.Status === 0 && (
-                        <button
-                          className="btn-preview"
-                          onClick={() => setSelectedReport(report)}
-                          title="Xem chi tiết báo cáo"
-                        >
-                          👁️ Xem trước
-                        </button>
-                      )}
-                      {report.Status !== 0 && (
-                        <span className="action-processed">Đã xử lý</span>
-                      )}
+                      <button
+                        className="btn-preview"
+                        onClick={() => setSelectedReport(report)}
+                        title="Xem chi tiết báo cáo"
+                      >
+                        👁️ Xem
+                      </button>
+                      <button
+                        className="btn-delete"
+                        onClick={() => handleDelete(report.Id)}
+                        title="Xóa báo cáo này"
+                      >
+                        🗑️ Xóa
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -185,6 +210,7 @@ export default function AdminReportsPage() {
             onClose={() => setSelectedReport(null)}
             onApprove={handleApprove}
             onReject={handleReject}
+            onDelete={handleDelete}
           />
         )}
       </div>

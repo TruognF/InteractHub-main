@@ -13,6 +13,7 @@ import StoryPage from './pages/StoryPage';
 import UserProfilePage from './pages/UserProfilePage';
 import PostDetailPage from './pages/PostDetailPage';
 import AdminLoginPage from './pages/AdminLoginPage';
+import AdminUsersPage from './pages/AdminUsersPage';
 import AdminReportsPage from './pages/AdminReportsPage';
 import AdminProtectedRoute from './components/AdminProtectedRoute';
 import { startConnection, resetPostHubConnection } from './utils/postHubConnection';
@@ -167,6 +168,9 @@ function App() {
           <Route path="/user-profile/:userId" element={token ? <UserProfilePage /> : <Navigate to="/login" replace />} />
           <Route path="/post/:postId" element={token ? <PostDetailPage /> : <Navigate to="/login" replace />} />
           <Route path="/admin/login" element={<AdminLoginPage />} />
+          <Route path="/admin" element={<Navigate to="/admin/users" replace />} />
+          <Route path="/admin/dashboard" element={<Navigate to="/admin/users" replace />} />
+          <Route path="/admin/users" element={<AdminProtectedRoute><AdminUsersPage /></AdminProtectedRoute>} />
           <Route path="/admin/reports" element={<AdminProtectedRoute><AdminReportsPage /></AdminProtectedRoute>} />
           <Route path="/" element={token ? <Navigate to="/home" replace /> : <Navigate to="/login" replace />} />
         </Routes>

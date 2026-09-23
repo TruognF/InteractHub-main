@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import '../styles/AdminSidebar.css';
 
 const ADMIN_ROUTES = [
+  { path: '/admin/users', label: 'Người dùng', icon: '👥' },
   { path: '/admin/reports', label: 'Báo cáo', icon: '📋' }
 ];
 

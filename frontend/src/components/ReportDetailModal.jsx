@@ -2,14 +2,19 @@ import { useState, useEffect } from 'react';
 import { getPostByIdAsAdmin, approveReport, rejectReport } from '../api';
 import '../styles/ReportDetailModal.css';
 
-export default function ReportDetailModal({ report, onClose, onApprove, onReject }) {
-  const [post, setPost] = useState(null);
-  const [loading, setLoading] = useState(true);
+const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?background=667eea&color=fff&size=80&name=';
+
+export default function ReportDetailModal({ report, onClose, onApprove, onReject, onDelete }) {
+  const [post, setPost] = useState(report.Post || null);
+  const [loading, setLoading] = useState(!report.Post);
   const [error, setError] = useState('');
   const [actioning, setActioning] = useState(false);
 
   useEffect(() => {
-    loadPostDetails();
+    // Only fetch if post data not already included in report
+    if (!report.Post) {
+      loadPostDetails();
+    }
   }, [report.PostId]);
 
   const loadPostDetails = async () => {
@@ -50,6 +55,13 @@ export default function ReportDetailModal({ report, onClose, onApprove, onReject
     }
   };
 
+  const handleDelete = async () => {
+    if (onDelete) {
+      await onDelete(report.Id);
+      onClose();
+    }
+  };
+
   const ReasonMap = {
     0: 'Nội dung gây hại',
     1: 'Thư rác',
@@ -59,6 +71,8 @@ export default function ReportDetailModal({ report, onClose, onApprove, onReject
     5: 'Tin giả',
     6: 'Khác'
   };
+
+  const reporter = report.ReporterUser;
 
   return (
     <div className="report-modal-overlay" onClick={onClose}>
@@ -71,9 +85,9 @@ export default function ReportDetailModal({ report, onClose, onApprove, onReject
         {error && <div className="report-modal-error">{error}</div>}
 
         <div className="report-modal-body">
-          {/* Post Content Section */}
+          {/* Section 1: Post Content */}
           <div className="report-section">
-            <h3 className="section-title">📝 Nội dung bài viết</h3>
+            <h3 className="section-title">📝 Nội dung bài viết bị báo cáo</h3>
             {loading ? (
               <div className="loading-skeleton">
                 <div className="skeleton-line" style={{ width: '80%' }} />
@@ -82,9 +96,21 @@ export default function ReportDetailModal({ report, onClose, onApprove, onReject
               </div>
             ) : post ? (
               <div className="post-preview">
+                {/* Post Author Header */}
                 <div className="post-header">
-                  <div className="post-author">
-                    <strong>{post.UserName || 'Người dùng'}</strong>
+                  <div className="post-author-info">
+                    <img
+                      className="post-author-avatar"
+                      src={post.UserProfilePictureUrl || `${DEFAULT_AVATAR}${encodeURIComponent(post.UserFullName || post.UserName || 'U')}`}
+                      alt="Avatar"
+                      onError={(e) => { e.target.src = `${DEFAULT_AVATAR}U`; }}
+                    />
+                    <div className="post-author-details">
+                      <strong className="post-author-name">{post.UserFullName || post.UserName || 'Người dùng'}</strong>
+                      {post.UserName && (
+                        <span className="post-author-username">@{post.UserName}</span>
+                      )}
+                    </div>
                   </div>
                   <div className="post-date">
                     {new Date(post.CreatedAt).toLocaleDateString('vi-VN', {
@@ -96,14 +122,38 @@ export default function ReportDetailModal({ report, onClose, onApprove, onReject
                     })}
                   </div>
                 </div>
+
+                {/* Post Content */}
                 <div className="post-content">
                   {post.Content}
                 </div>
+
+                {/* Post Image */}
                 {post.ImageUrl && (
                   <div className="post-image">
                     <img src={post.ImageUrl} alt="Post content" />
                   </div>
                 )}
+
+                {/* Post Stats Bar */}
+                <div className="post-stats-bar">
+                  <span className="post-stat" title="Lượt thích">
+                    👍 {post.LikesCount ?? 0} lượt thích
+                  </span>
+                  <span className="post-stat" title="Bình luận">
+                    💬 {post.CommentsCount ?? 0} bình luận
+                  </span>
+                  {post.GroupId && (
+                    <span className="post-stat post-stat-group" title="Bài viết trong nhóm">
+                      📂 Nhóm #{post.GroupId}
+                    </span>
+                  )}
+                  {post.IsShared && (
+                    <span className="post-stat post-stat-shared" title="Bài chia sẻ">
+                      🔄 Bài chia sẻ
+                    </span>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="post-not-found">
@@ -112,7 +162,35 @@ export default function ReportDetailModal({ report, onClose, onApprove, onReject
             )}
           </div>
 
-          {/* Report Details Section */}
+          {/* Section 2: Reporter Info */}
+          <div className="report-section">
+            <h3 className="section-title">🚩 Người báo cáo</h3>
+            {reporter ? (
+              <div className="user-info-card">
+                <img
+                  className="user-info-avatar"
+                  src={reporter.ProfilePictureUrl || `${DEFAULT_AVATAR}${encodeURIComponent(reporter.FullName || reporter.UserName || 'U')}`}
+                  alt="Reporter avatar"
+                  onError={(e) => { e.target.src = `${DEFAULT_AVATAR}U`; }}
+                />
+                <div className="user-info-details">
+                  <strong className="user-info-name">{reporter.FullName || reporter.UserName || 'Người dùng'}</strong>
+                  {reporter.UserName && (
+                    <span className="user-info-username">@{reporter.UserName}</span>
+                  )}
+                  {reporter.Email && (
+                    <span className="user-info-email">{reporter.Email}</span>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="user-info-card user-info-unknown">
+                <span>Không có thông tin người báo cáo</span>
+              </div>
+            )}
+          </div>
+
+          {/* Section 3: Report Details */}
           <div className="report-section">
             <h3 className="section-title">🚨 Chi tiết báo cáo</h3>
             <div className="report-details">
@@ -127,30 +205,63 @@ export default function ReportDetailModal({ report, onClose, onApprove, onReject
               <div className="detail-row">
                 <span className="detail-label">Ngày báo cáo:</span>
                 <span className="detail-value">
-                  {new Date(report.CreatedAt).toLocaleDateString('vi-VN')}
+                  {new Date(report.CreatedAt).toLocaleDateString('vi-VN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Action Buttons Section */}
+          {/* Section 4: Action Buttons */}
           <div className="report-section">
             <h3 className="section-title">⚙️ Hành động</h3>
+
+            {report.Status === 1 && (
+              <div className="report-status-notice approved-notice">
+                <span>✅ Báo cáo này đã được duyệt. Bài viết vi phạm đã bị gỡ xuống.</span>
+              </div>
+            )}
+
+            {report.Status === 2 && (
+              <div className="report-status-notice rejected-notice">
+                <span>❌ Báo cáo này đã bị từ chối.</span>
+              </div>
+            )}
+
             <div className="report-actions-modal">
-              <button
-                className="btn-approve-modal"
-                onClick={handleApprove}
-                disabled={actioning}
-              >
-                {actioning ? '⏳ Đang xử lý...' : '✓ Duyệt báo cáo (Xóa bài viết)'}
-              </button>
-              <button
-                className="btn-reject-modal"
-                onClick={handleReject}
-                disabled={actioning}
-              >
-                {actioning ? '⏳ Đang xử lý...' : '✕ Từ chối báo cáo'}
-              </button>
+              {report.Status === 0 && (
+                <>
+                  <button
+                    className="btn-approve-modal"
+                    onClick={handleApprove}
+                    disabled={actioning}
+                  >
+                    {actioning ? '⏳ Đang xử lý...' : '✓ Duyệt báo cáo (Xóa bài viết)'}
+                  </button>
+                  <button
+                    className="btn-reject-modal"
+                    onClick={handleReject}
+                    disabled={actioning}
+                  >
+                    {actioning ? '⏳ Đang xử lý...' : '✕ Từ chối báo cáo'}
+                  </button>
+                </>
+              )}
+
+              {onDelete && (
+                <button
+                  className="btn-delete-modal"
+                  onClick={handleDelete}
+                  disabled={actioning}
+                >
+                  🗑️ Xóa báo cáo này
+                </button>
+              )}
             </div>
           </div>
         </div>

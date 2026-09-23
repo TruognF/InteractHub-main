@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAdminAuth } from '../contexts/AdminAuthContext';
 import '../styles/AdminLoginPage.css';
 
@@ -85,11 +85,17 @@ export default function AdminLoginPage() {
           </button>
         </form>
 
+        <div className="admin-back-to-user">
+          <Link to="/login" className="btn-back-to-user">
+            ← Quay lại đăng nhập người dùng
+          </Link>
+        </div>
+
         <div className="admin-login-footer">
           <p className="demo-info">
-            Demo Credentials:<br />
+            {/* Demo Credentials:<br />
             Username: <code>admin</code><br />
-            Password: <code>Admin@123456</code>
+            Password: <code>Admin@123456</code> */}
           </p>
         </div>
       </div>
