@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using InteractHub.Application.Interfaces;
 using InteractHub.Application.Entities;
 using InteractHub.Application.Entities.Enums;
+using InteractHub.Application.DTOs;
 using InteractHub.API.DTOs;
 using InteractHub.API.DTOs.Response;
 using InteractHub.API.Extensions;
@@ -37,6 +38,59 @@ public class PostReportsController : ControllerBase
         _notificationService = notificationService;
         _postDeletionLogService = postDeletionLogService;
         _mapper = mapper;
+    }
+
+    /// <summary>
+    /// Helper: Map PostReport entity to PostReportResponseDto with full Post + ReporterUser data
+    /// </summary>
+    private PostReportResponseDto MapToDto(PostReport r)
+    {
+        return new PostReportResponseDto
+        {
+            Id = r.Id,
+            Reason = r.Reason,
+            Detail = r.Detail,
+            Status = r.Status,
+            PostId = r.PostId,
+            ReporterUserId = r.ReporterUserId,
+            CreatedAt = r.CreatedAt,
+            ReviewedAt = r.ReviewedAt,
+            ReviewedByAdminId = r.ReviewedByAdminId,
+            Post = r.Post != null ? new PostResponseDto
+            {
+                Id = r.Post.Id,
+                Content = r.Post.Content,
+                ImageUrl = r.Post.ImageUrl,
+                CreatedAt = r.Post.CreatedAt,
+                UpdatedAt = r.Post.UpdatedAt,
+                UserId = r.Post.UserId,
+                UserName = r.Post.User?.UserName,
+                UserFullName = r.Post.User?.FullName,
+                UserProfilePictureUrl = r.Post.User?.ProfilePictureUrl,
+                GroupId = r.Post.GroupId,
+                LikesCount = r.Post.Likes?.Count ?? 0,
+                CommentsCount = r.Post.Comments?.Count ?? 0,
+                IsShared = r.Post.SharedPostId.HasValue,
+                SharedPostId = r.Post.SharedPostId
+            } : null,
+            ReporterUser = r.ReporterUser != null ? new UserResponseDto
+            {
+                Id = r.ReporterUser.Id,
+                UserName = r.ReporterUser.UserName ?? "",
+                Email = r.ReporterUser.Email ?? "",
+                FullName = r.ReporterUser.FullName,
+                ProfilePictureUrl = r.ReporterUser.ProfilePictureUrl,
+                Bio = r.ReporterUser.Bio
+            } : null,
+            ReviewedByAdmin = r.ReviewedByAdmin != null ? new UserResponseDto
+            {
+                Id = r.ReviewedByAdmin.Id,
+                UserName = r.ReviewedByAdmin.UserName ?? "",
+                Email = r.ReviewedByAdmin.Email ?? "",
+                FullName = r.ReviewedByAdmin.FullName,
+                ProfilePictureUrl = r.ReviewedByAdmin.ProfilePictureUrl
+            } : null
+        };
     }
 
     /// <summary>
@@ -114,19 +168,8 @@ public class PostReportsController : ControllerBase
             .OrderByDescending(r => r.CreatedAt)
             .ToList();
 
-        // Manual mapping to avoid AutoMapper issues
-        var reportDtos = reports.Select(r => new PostReportResponseDto
-        {
-            Id = r.Id,
-            Reason = r.Reason,
-            Detail = r.Detail,
-            Status = r.Status,
-            PostId = r.PostId,
-            ReporterUserId = r.ReporterUserId,
-            CreatedAt = r.CreatedAt,
-            ReviewedAt = r.ReviewedAt,
-            ReviewedByAdminId = r.ReviewedByAdminId
-        }).ToList();
+        // Use helper for full mapping including Post + ReporterUser
+        var reportDtos = reports.Select(MapToDto).ToList();
 
         return this.SuccessResponse(reportDtos);
     }
@@ -146,19 +189,8 @@ public class PostReportsController : ControllerBase
             .Take(pageSize)
             .ToList();
 
-        // Manual mapping to avoid AutoMapper issues
-        var reportDtos = reports.Select(r => new PostReportResponseDto
-        {
-            Id = r.Id,
-            Reason = r.Reason,
-            Detail = r.Detail,
-            Status = r.Status,
-            PostId = r.PostId,
-            ReporterUserId = r.ReporterUserId,
-            CreatedAt = r.CreatedAt,
-            ReviewedAt = r.ReviewedAt,
-            ReviewedByAdminId = r.ReviewedByAdminId
-        }).ToList();
+        // Use helper for full mapping including Post + ReporterUser
+        var reportDtos = reports.Select(MapToDto).ToList();
         return this.SuccessResponse(reportDtos);
     }
 
@@ -175,19 +207,8 @@ public class PostReportsController : ControllerBase
         if (report == null)
             return this.NotFoundResponse("Report not found");
 
-        // Manual mapping to avoid AutoMapper issues
-        var reportDto = new PostReportResponseDto
-        {
-            Id = report.Id,
-            Reason = report.Reason,
-            Detail = report.Detail,
-            Status = report.Status,
-            PostId = report.PostId,
-            ReporterUserId = report.ReporterUserId,
-            CreatedAt = report.CreatedAt,
-            ReviewedAt = report.ReviewedAt,
-            ReviewedByAdminId = report.ReviewedByAdminId
-        };
+        // Use helper for full mapping including Post + ReporterUser
+        var reportDto = MapToDto(report);
         return this.SuccessResponse(reportDto);
     }
 
@@ -401,5 +422,30 @@ public class PostReportsController : ControllerBase
             ReviewedByAdminId = report.ReviewedByAdminId
         };
         return this.SuccessResponse(reportDto, "Báo cáo bị từ chối");
+    }
+
+    /// <summary>
+    /// Delete report (admin only)
+    /// </summary>
+    [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteReport(int id)
+    {
+        var adminId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(adminId))
+            return this.UnauthorizedResponse("Admin not authenticated");
+
+        var report = await _postReportService.GetByIdAsync(id);
+        if (report == null)
+            return this.NotFoundResponse("Report not found");
+
+        var success = await _postReportService.DeleteAsync(id);
+        if (!success)
+            return this.ErrorResponse("Không thể xóa báo cáo");
+
+        Console.WriteLine($"[PostReportsController] 🗑️ Report {id} deleted by admin {adminId}");
+        return this.SuccessResponse(message: "Xóa báo cáo thành công");
     }
 }

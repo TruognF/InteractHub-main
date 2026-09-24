@@ -37,12 +37,18 @@ public class AdminController : ControllerBase
         foreach (var user in users)
         {
             var roles = await _userManager.GetRolesAsync(user);
+            var isLocked = user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow;
             usersWithRoles.Add(new UserWithRolesDto
             {
                 Id = user.Id,
-                UserName = user.UserName,
-                Email = user.Email,
-                FullName = user.FullName,
+                UserName = user.UserName ?? "",
+                Email = user.Email ?? "",
+                FullName = user.FullName ?? "",
+                ProfilePictureUrl = user.ProfilePictureUrl,
+                Bio = user.Bio,
+                IsLocked = isLocked,
+                LockoutEnd = user.LockoutEnd,
+                LastActiveAt = user.LastActiveAt,
                 Roles = roles.ToList()
             });
         }
@@ -127,16 +133,81 @@ public class AdminController : ControllerBase
             return this.ErrorResponse("User not found", statusCode: 404);
 
         var roles = await _userManager.GetRolesAsync(user);
+        var isLocked = user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow;
         var userWithRoles = new UserWithRolesDto
         {
             Id = user.Id,
-            UserName = user.UserName,
-            Email = user.Email,
-            FullName = user.FullName,
+            UserName = user.UserName ?? "",
+            Email = user.Email ?? "",
+            FullName = user.FullName ?? "",
+            ProfilePictureUrl = user.ProfilePictureUrl,
+            Bio = user.Bio,
+            IsLocked = isLocked,
+            LockoutEnd = user.LockoutEnd,
+            LastActiveAt = user.LastActiveAt,
             Roles = roles.ToList()
         };
 
         return this.SuccessResponse(userWithRoles);
+    }
+
+    // ✅ POST /api/admin/toggle-lock-user
+    [HttpPost("toggle-lock-user")]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ToggleLockUser([FromBody] ToggleLockUserDto dto)
+    {
+        var user = await _userManager.FindByIdAsync(dto.UserId);
+        if (user == null)
+            return this.ErrorResponse("User not found", statusCode: 404);
+
+        // 🔒 Không cho phép tự khóa chính mình
+        var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (currentUserId == user.Id)
+            return this.ErrorResponse("Không thể khóa tài khoản của chính mình", statusCode: 400);
+
+        var isCurrentlyLocked = user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow;
+
+        if (isCurrentlyLocked)
+        {
+            // Mở khóa
+            await _userManager.SetLockoutEndDateAsync(user, null);
+            return this.SuccessResponse(new { isLocked = false, message = $"Đã mở khóa tài khoản '{user.UserName}'" });
+        }
+        else
+        {
+            // Khóa
+            await _userManager.SetLockoutEnabledAsync(user, true);
+            await _userManager.SetLockoutEndDateAsync(user, DateTimeOffset.UtcNow.AddYears(100));
+            return this.SuccessResponse(new { isLocked = true, message = $"Đã khóa tài khoản '{user.UserName}'" });
+        }
+    }
+
+    // ✅ POST /api/admin/reset-user-password
+    [HttpPost("reset-user-password")]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ResetUserPassword([FromBody] ResetPasswordAdminDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.NewPassword) || dto.NewPassword.Length < 6)
+            return this.ErrorResponse("Mật khẩu mới phải có ít nhất 6 ký tự", statusCode: 400);
+
+        var user = await _userManager.FindByIdAsync(dto.UserId);
+        if (user == null)
+            return this.ErrorResponse("User not found", statusCode: 404);
+
+        // Remove old password and set new one
+        await _userManager.RemovePasswordAsync(user);
+        var addResult = await _userManager.AddPasswordAsync(user, dto.NewPassword);
+        if (!addResult.Succeeded)
+        {
+            var errors = string.Join(", ", addResult.Errors.Select(e => e.Description));
+            return this.ErrorResponse($"Không thể đặt lại mật khẩu: {errors}", statusCode: 400);
+        }
+
+        return this.SuccessResponse(new { message = $"Đã đặt lại mật khẩu thành công cho '{user.UserName}'" });
     }
 
     // ✅ DELETE /api/admin/delete-user/{userId}
@@ -153,7 +224,7 @@ public class AdminController : ControllerBase
         // ✅ Không cho phép xóa chính mình
         var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         if (currentUserId == user.Id)
-            return this.ErrorResponse("Cannot delete your own account", statusCode: 400);
+            return this.ErrorResponse("Không thể xóa tài khoản của chính mình", statusCode: 400);
 
         var result = await _userManager.DeleteAsync(user);
         if (!result.Succeeded)

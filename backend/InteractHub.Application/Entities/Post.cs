@@ -7,6 +7,7 @@ public class Post
     public string? ImageUrl {get; set;}
     public DateTime CreatedAt {get; set;} = DateTime.Now;
     public DateTime? UpdatedAt {get; set;}
+    public bool IsDeleted {get; set;} = false;
 
     public string UserId {get; set;}
     public User User {get; set;}

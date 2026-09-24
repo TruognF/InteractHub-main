@@ -327,14 +327,14 @@ export default function AdminUsersPage() {
                           {user.IsLocked ? '🔓 Mở' : '🔒 Khóa'}
                         </button>
 
-                        <button
-                          className="btn-user-action delete"
+                        {/* <button
+                          // className="btn-user-action delete"
                           onClick={() => handleQuickDelete(user)}
                           disabled={isSelf}
                           title={isSelf ? 'Không thể xóa chính mình' : 'Xóa tài khoản'}
                         >
                           🗑️
-                        </button>
+                        </button> */}
                       </td>
                     </tr>
                   );

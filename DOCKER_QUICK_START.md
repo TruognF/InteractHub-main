@@ -15,8 +15,8 @@ cd f:\HocKy5\CSharp\InteractHub
 docker-compose up --build
 
 # Hoặc chạy ở background
-docker-compose up -d --build
-```
+`  docker-compose up -d --build
+````
 
 ### 2️⃣ Chờ Initialization
 Nhân đợi khoảng 30-60 giây để:

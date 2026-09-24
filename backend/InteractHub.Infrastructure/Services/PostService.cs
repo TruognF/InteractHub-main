@@ -30,19 +30,23 @@ public class PostService : IPostService
             return false;
         }
 
-        _context.Posts.Remove(post);
+        // Soft delete: Đánh dấu đã xóa để ẩn bài viết khỏi người dùng
+        // và bảo toàn các báo cáo vi phạm liên quan (PostReports) cho Admin
+        post.IsDeleted = true;
+        post.UpdatedAt = DateTime.UtcNow;
+        _context.Posts.Update(post);
         await _context.SaveChangesAsync();
         return true;
     }
 
     public async Task<List<Post>> GetAllAsync()
     {
-        return await _context.Posts.AsNoTracking().ToListAsync();
+        return await _context.Posts.AsNoTracking().Where(p => !p.IsDeleted).ToListAsync();
     }
 
     public async Task<Post?> GetByIdAsync(int id)
     {
-        return await _context.Posts.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id);
+        return await _context.Posts.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted);
     }
 
     private static readonly System.Linq.Expressions.Expression<System.Func<Post, PostResponseDto>> ToDto =
@@ -84,7 +88,7 @@ public class PostService : IPostService
 
     public async Task<(List<PostResponseDto> Posts, int TotalCount)> GetFeedAsync(int page, int pageSize)
     {
-        var query = _context.Posts.AsNoTracking().Where(p => p.GroupId == null);
+        var query = _context.Posts.AsNoTracking().Where(p => p.GroupId == null && !p.IsDeleted);
         var totalCount = await query.CountAsync();
         var posts = await query
             .OrderByDescending(p => p.CreatedAt)
@@ -97,7 +101,7 @@ public class PostService : IPostService
 
     public async Task<(List<PostResponseDto> Posts, int TotalCount)> GetUserPostsAsync(string userId, int page, int pageSize)
     {
-        var query = _context.Posts.AsNoTracking().Where(p => p.UserId == userId && p.GroupId == null);
+        var query = _context.Posts.AsNoTracking().Where(p => p.UserId == userId && p.GroupId == null && !p.IsDeleted);
         var totalCount = await query.CountAsync();
         var posts = await query
             .OrderByDescending(p => p.CreatedAt)
@@ -110,7 +114,7 @@ public class PostService : IPostService
 
     public async Task<(List<PostResponseDto> Posts, int TotalCount)> GetGroupPostsAsync(int groupId, int page, int pageSize)
     {
-        var query = _context.Posts.AsNoTracking().Where(p => p.GroupId == groupId);
+        var query = _context.Posts.AsNoTracking().Where(p => p.GroupId == groupId && !p.IsDeleted);
         var totalCount = await query.CountAsync();
         var posts = await query
             .OrderByDescending(p => p.CreatedAt)
@@ -124,7 +128,7 @@ public class PostService : IPostService
     public async Task<PostResponseDto?> GetByIdDtoAsync(int id)
     {
         return await _context.Posts.AsNoTracking()
-            .Where(p => p.Id == id)
+            .Where(p => p.Id == id && !p.IsDeleted)
             .Select(ToDto)
             .FirstOrDefaultAsync();
     }
@@ -132,7 +136,7 @@ public class PostService : IPostService
     public async Task<PostLiteDto?> GetLiteAsync(int id)
     {
         return await _context.Posts.AsNoTracking()
-            .Where(p => p.Id == id)
+            .Where(p => p.Id == id && !p.IsDeleted)
             .Select(p => new PostLiteDto { UserId = p.UserId, GroupId = p.GroupId })
             .FirstOrDefaultAsync();
     }

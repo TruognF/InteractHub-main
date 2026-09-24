@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { assignRoleToUser, removeRoleFromUser, toggleLockUser, resetUserPassword, deleteUser } from '../api';
+import { assignRoleToUser, removeRoleFromUser, toggleLockUser, deleteUser } from '../api';
 import '../styles/UserDetailModal.css';
 
 const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?background=667eea&color=fff&size=80&name=';
@@ -7,8 +7,6 @@ const AVAILABLE_ROLES = ['Admin', 'Moderator', 'User'];
 
 export default function UserDetailModal({ user, currentAdminId, onClose, onUserUpdated, onUserDeleted }) {
   const [currentUser, setCurrentUser] = useState(user);
-  const [newPassword, setNewPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [loadingAction, setLoadingAction] = useState('');
   const [message, setMessage] = useState({ text: '', type: '' });
 
@@ -72,28 +70,6 @@ export default function UserDetailModal({ user, currentAdminId, onClose, onUserU
       }
     } catch (err) {
       showMsg(err.message || 'Lỗi khi cập nhật vai trò', 'error');
-    } finally {
-      setLoadingAction('');
-    }
-  };
-
-  // Reset password
-  const handleResetPassword = async (e) => {
-    e.preventDefault();
-    if (!newPassword || newPassword.length < 6) {
-      showMsg('Mật khẩu mới phải có ít nhất 6 ký tự', 'error');
-      return;
-    }
-
-    if (!window.confirm(`Bạn có chắc muốn đặt lại mật khẩu cho tài khoản "${currentUser.UserName}"?`)) return;
-
-    try {
-      setLoadingAction('password');
-      await resetUserPassword(currentUser.Id, newPassword);
-      setNewPassword('');
-      showMsg('Đặt lại mật khẩu thành công!', 'success');
-    } catch (err) {
-      showMsg(err.message || 'Lỗi khi đặt lại mật khẩu', 'error');
     } finally {
       setLoadingAction('');
     }
@@ -182,37 +158,6 @@ export default function UserDetailModal({ user, currentAdminId, onClose, onUserU
             {isSelf && <p className="note-text">Lưu ý: Bạn không thể tự gỡ quyền Admin của chính mình.</p>}
           </div>
 
-          {/* Reset Password */}
-          <div className="user-modal-section">
-            <h4 className="section-heading">🔑 Đặt lại mật khẩu</h4>
-            <form onSubmit={handleResetPassword} className="reset-password-form">
-              <div className="password-input-group">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="reset-input"
-                  disabled={loadingAction === 'password'}
-                />
-                <button
-                  type="button"
-                  className="btn-toggle-eye"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? '👁️' : '👁️‍🗨️'}
-                </button>
-              </div>
-              <button
-                type="submit"
-                className="btn-submit-reset"
-                disabled={loadingAction === 'password' || !newPassword}
-              >
-                {loadingAction === 'password' ? '⏳ Đang đổi...' : 'Cấp mật khẩu mới'}
-              </button>
-            </form>
-          </div>
-
           {/* Danger Zone */}
           <div className="user-modal-section danger-section">
             <h4 className="section-heading">⚠️ Tác vụ quản trị</h4>
@@ -230,6 +175,7 @@ export default function UserDetailModal({ user, currentAdminId, onClose, onUserU
                     : '🔒 Khóa tài khoản'}
               </button>
 
+              {/* Tạm thời ẩn chức năng xóa tài khoản theo yêu cầu
               <button
                 type="button"
                 className="btn-delete-account"
@@ -238,6 +184,7 @@ export default function UserDetailModal({ user, currentAdminId, onClose, onUserU
               >
                 {loadingAction === 'delete' ? '⏳ Đang xóa...' : '🗑️ Xóa vĩnh viễn tài khoản'}
               </button>
+              */}
             </div>
           </div>
         </div>

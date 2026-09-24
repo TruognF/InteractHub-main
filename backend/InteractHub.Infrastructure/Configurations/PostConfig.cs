@@ -10,11 +10,13 @@ public class PostConfig : IEntityTypeConfiguration<Post>
         builder.HasKey(p => p.Id);
 
         builder.Property(p => p.Content).IsRequired();
+        builder.Property(p => p.IsDeleted).HasDefaultValue(false);
 
         builder.HasOne(p => p.User).WithMany(u => u.Posts).HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
 
         builder.HasIndex(p => new { p.GroupId, p.CreatedAt });
         builder.HasIndex(p => p.UserId);
+        builder.HasIndex(p => p.IsDeleted);
 
     }
 }
