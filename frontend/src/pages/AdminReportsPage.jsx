@@ -7,8 +7,11 @@ import '../styles/AdminReportsPage.css';
 const ReportStatusBadge = ({ status }) => {
   const statusMap = {
     0: { label: 'Chờ xử lý', class: 'pending' },
-    1: { label: 'Đã duyệt', class: 'approved' },
-    2: { label: 'Từ chối', class: 'rejected' }
+    1: { label: 'Đã duyệt (Gỡ bài)', class: 'approved' },
+    2: { label: 'Từ chối', class: 'rejected' },
+    3: { label: '⚖️ Đang kháng cáo', class: 'appealed' },
+    4: { label: 'Đã khôi phục', class: 'appeal-approved' },
+    5: { label: 'Bác bỏ kháng cáo', class: 'appeal-rejected' }
   };
   const s = statusMap[status] || { label: 'Unknown', class: 'unknown' };
   return <span className={`status-badge ${s.class}`}>{s.label}</span>;
@@ -45,7 +48,14 @@ export default function AdminReportsPage() {
     if (filterValue === 'all') {
       setFilteredReports(reportsList);
     } else {
-      const statusMap = { pending: 0, approved: 1, rejected: 2 };
+      const statusMap = {
+        pending: 0,
+        approved: 1,
+        rejected: 2,
+        appealed: 3,
+        appealApproved: 4,
+        appealRejected: 5
+      };
       const filtered = reportsList.filter(r => r.Status === statusMap[filterValue]);
       setFilteredReports(filtered);
     }
@@ -66,6 +76,20 @@ export default function AdminReportsPage() {
   const handleReject = (reportId) => {
     // Update the report status to rejected (2)
     const updated = reports.map(r => r.Id === reportId ? { ...r, Status: 2 } : r);
+    setReports(updated);
+    applyFilter(updated, statusFilter);
+  };
+
+  const handleAcceptAppeal = (reportId) => {
+    // Cập nhật trạng thái thành Đã khôi phục (Status = 4)
+    const updated = reports.map(r => r.Id === reportId ? { ...r, Status: 4 } : r);
+    setReports(updated);
+    applyFilter(updated, statusFilter);
+  };
+
+  const handleRejectAppeal = (reportId) => {
+    // Cập nhật trạng thái thành Bác bỏ kháng cáo (Status = 5)
+    const updated = reports.map(r => r.Id === reportId ? { ...r, Status: 5 } : r);
     setReports(updated);
     applyFilter(updated, statusFilter);
   };
@@ -106,10 +130,12 @@ export default function AdminReportsPage() {
               onChange={(e) => handleFilterChange(e.target.value)}
               className="filter-select"
             >
-              <option value="all">Tất cả</option>
+              <option value="all">Tất cả trạng thái</option>
               <option value="pending">Chờ xử lý</option>
+              <option value="appealed">⚖️ Đang kháng cáo</option>
               <option value="approved">Đã duyệt</option>
-              <option value="rejected">Từ chối</option>
+              <option value="appealApproved">Đã khôi phục</option>
+              <option value="rejected">Từ chối báo cáo</option>
             </select>
           </div>
         </div>
@@ -210,6 +236,8 @@ export default function AdminReportsPage() {
             onClose={() => setSelectedReport(null)}
             onApprove={handleApprove}
             onReject={handleReject}
+            onAcceptAppeal={handleAcceptAppeal}
+            onRejectAppeal={handleRejectAppeal}
             onDelete={handleDelete}
           />
         )}

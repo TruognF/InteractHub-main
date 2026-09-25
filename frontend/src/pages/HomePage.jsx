@@ -5,6 +5,7 @@ import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import HashtagContent from '../components/HashtagContent';
 import ReportPostModal from '../components/ReportPostModal';
+import UserAppealModal from '../components/UserAppealModal';
 import '../styles/HomePage.css';
 import { startConnection } from '../utils/postHubConnection';
 import { mergeCommentIntoList, sameCommentId } from '../utils/commentNormalize';
@@ -54,6 +55,7 @@ export default function HomePage() {
   const [sharePending, setSharePending] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportPostId, setReportPostId] = useState(null);
+  const [appealingReportId, setAppealingReportId] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
   const postsEndRef = useRef(null);
@@ -66,18 +68,30 @@ export default function HomePage() {
     [notifications]
   );
 
+  const parseUtcDate = (dateVal) => {
+    if (!dateVal) return null;
+    const dateStr = typeof dateVal === 'string' && !dateVal.endsWith('Z') && !dateVal.includes('+')
+      ? dateVal + 'Z'
+      : dateVal;
+    const date = new Date(dateStr);
+    return isNaN(date.getTime()) ? null : date;
+  };
+
   const formatTimeAgo = (createdAt) => {
-    if (!createdAt) return '';
-    const date = new Date(createdAt);
+    const date = parseUtcDate(createdAt);
+    if (!date) return '';
     const diff = Date.now() - date.getTime();
-    const seconds = Math.floor(diff / 1000);
-    if (seconds < 60) return 'vừa xong';
-    const minutes = Math.floor(seconds / 60);
+    if (diff < 60000) return 'vừa xong';
+    const minutes = Math.floor(diff / (1000 * 60));
     if (minutes < 60) return `${minutes} phút trước`;
-    const hours = Math.floor(minutes / 60);
+    const hours = Math.floor(diff / (1000 * 60 * 60));
     if (hours < 24) return `${hours} giờ trước`;
-    const days = Math.floor(hours / 24);
-    return `${days} ngày trước`;
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    if (days < 30) return `${days} ngày trước`;
+    const months = Math.floor(days / 30);
+    if (months < 12) return `${months} tháng trước`;
+    const years = Math.floor(days / 365);
+    return `${years} năm trước`;
   };
 
   const normalizeSearchText = (text = '') => {
@@ -104,7 +118,11 @@ export default function HomePage() {
       // Filter out message notifications - only show friend requests, likes, comments, and shares
       const filteredNotifications = (notificationData || [])
         .filter((n) => !isMessageNotificationType(n.Type))
-        .sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt));
+        .sort((a, b) => {
+          const timeA = parseUtcDate(a.CreatedAt || a.createdAt)?.getTime() || 0;
+          const timeB = parseUtcDate(b.CreatedAt || b.createdAt)?.getTime() || 0;
+          return timeB - timeA;
+        });
       setNotifications(filteredNotifications);
       
       // Count unread messages separately
@@ -1768,12 +1786,38 @@ export default function HomePage() {
                 {notifications.length === 0 ? (
                   <p className="no-results">Hiện chưa có thông báo</p>
                 ) : (
-                  notifications.map((item) => (
-                    <div key={item.Id || item.id} className="notification-item">
-                      <p className="notification-title">{item.Content || item.title}</p>
-                      <p className="notification-time">{item.TimeAgo || formatTimeAgo(item.CreatedAt) || item.time}</p>
-                    </div>
-                  ))
+                  notifications.map((item) => {
+                    const isModerationNotice = item.Content && (item.Content.includes('bị gỡ') || item.Content.includes('Kháng cáo') || item.Content.includes('kháng cáo'));
+                    return (
+                      <div key={item.Id || item.id} className="notification-item">
+                        <p className="notification-title">{item.Content || item.title}</p>
+                        <p className="notification-time">{formatTimeAgo(item.CreatedAt || item.createdAt) || item.TimeAgo || item.time}</p>
+                        {isModerationNotice && item.RelatedEntityId && (
+                          <div style={{ marginTop: '8px' }}>
+                            <button
+                              type="button"
+                              onClick={() => setAppealingReportId(item.RelatedEntityId)}
+                              style={{
+                                padding: '5px 12px',
+                                fontSize: '12px',
+                                borderRadius: '6px',
+                                border: '1px solid #e67e22',
+                                background: '#fffaf0',
+                                color: '#d35400',
+                                cursor: 'pointer',
+                                fontWeight: '600',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px'
+                              }}
+                            >
+                              ⚖️ {item.Content.includes('bị gỡ') ? 'Gửi đơn kháng cáo' : 'Xem chi tiết kháng cáo'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </>
@@ -2055,6 +2099,16 @@ export default function HomePage() {
           setReportPostId(null);
         }}
       />
+
+      {appealingReportId && (
+        <UserAppealModal 
+          reportId={appealingReportId}
+          onClose={() => setAppealingReportId(null)}
+          onSuccess={() => {
+            if (currentUser) loadNotifications(currentUser);
+          }}
+        />
+      )}
     </div>
   );
 }

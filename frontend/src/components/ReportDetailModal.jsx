@@ -1,14 +1,25 @@
 import { useState, useEffect } from 'react';
-import { getPostByIdAsAdmin, approveReport, rejectReport } from '../api';
+import { getPostByIdAsAdmin, approveReport, rejectReport, acceptReportAppeal, rejectReportAppeal } from '../api';
 import '../styles/ReportDetailModal.css';
 
 const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?background=667eea&color=fff&size=80&name=';
 
-export default function ReportDetailModal({ report, onClose, onApprove, onReject, onDelete }) {
+export default function ReportDetailModal({ report, onClose, onApprove, onReject, onAcceptAppeal, onRejectAppeal, onDelete }) {
   const [post, setPost] = useState(report.Post || null);
   const [loading, setLoading] = useState(!report.Post);
   const [error, setError] = useState('');
   const [actioning, setActioning] = useState(false);
+
+  // Phân tích nội dung chi tiết và kháng cáo nếu có
+  const appealMarker = '[KHÁNG CÁO]:';
+  const hasAppeal = report.Detail && report.Detail.includes(appealMarker);
+  let cleanDetail = report.Detail || '';
+  let appealReason = '';
+  if (hasAppeal) {
+    const parts = report.Detail.split(appealMarker);
+    cleanDetail = parts[0]?.trim() || '';
+    appealReason = parts[1]?.trim() || '';
+  }
 
   useEffect(() => {
     // Only fetch if post data not already included in report
@@ -50,6 +61,32 @@ export default function ReportDetailModal({ report, onClose, onApprove, onReject
       onClose();
     } catch (err) {
       setError('Lỗi khi từ chối báo cáo: ' + err.message);
+    } finally {
+      setActioning(false);
+    }
+  };
+
+  const handleAcceptAppealAction = async () => {
+    try {
+      setActioning(true);
+      await acceptReportAppeal(report.Id);
+      if (onAcceptAppeal) onAcceptAppeal(report.Id);
+      onClose();
+    } catch (err) {
+      setError('Lỗi khi chấp thuận kháng cáo: ' + err.message);
+    } finally {
+      setActioning(false);
+    }
+  };
+
+  const handleRejectAppealAction = async () => {
+    try {
+      setActioning(true);
+      await rejectReportAppeal(report.Id);
+      if (onRejectAppeal) onRejectAppeal(report.Id);
+      onClose();
+    } catch (err) {
+      setError('Lỗi khi từ chối kháng cáo: ' + err.message);
     } finally {
       setActioning(false);
     }
@@ -200,7 +237,7 @@ export default function ReportDetailModal({ report, onClose, onApprove, onReject
               </div>
               <div className="detail-row">
                 <span className="detail-label">Chi tiết:</span>
-                <span className="detail-value report-detail-text">{report.Detail || 'Không có chi tiết'}</span>
+                <span className="detail-value report-detail-text">{cleanDetail || 'Không có chi tiết'}</span>
               </div>
               <div className="detail-row">
                 <span className="detail-label">Ngày báo cáo:</span>
@@ -217,6 +254,24 @@ export default function ReportDetailModal({ report, onClose, onApprove, onReject
             </div>
           </div>
 
+          {/* Section 3.5: Appeal Information */}
+          {(hasAppeal || report.Status === 3 || report.Status === 4 || report.Status === 5) && (
+            <div className="report-section appeal-highlight-section">
+              <h3 className="section-title">⚖️ Thông tin kháng cáo từ tác giả bài viết</h3>
+              <div className="appeal-box">
+                <p className="appeal-text">
+                  <strong>Lý do kháng cáo:</strong> {appealReason || "Tác giả bài viết yêu cầu xem xét lại việc gỡ bài."}
+                </p>
+                <span className="appeal-status-tag">
+                  {report.Status === 3 && "⏳ Đang chờ Quản trị viên xem xét"}
+                  {report.Status === 4 && "✅ Đã chấp thuận (Bài viết đã được khôi phục)"}
+                  {report.Status === 5 && "❌ Đã bị bác bỏ (Tiếp tục gỡ bài)"}
+                  {report.Status === 1 && "⚠️ Đã ghi nhận kháng cáo"}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Section 4: Action Buttons */}
           <div className="report-section">
             <h3 className="section-title">⚙️ Hành động</h3>
@@ -230,6 +285,24 @@ export default function ReportDetailModal({ report, onClose, onApprove, onReject
             {report.Status === 2 && (
               <div className="report-status-notice rejected-notice">
                 <span>❌ Báo cáo này đã bị từ chối.</span>
+              </div>
+            )}
+
+            {report.Status === 3 && (
+              <div className="report-status-notice" style={{ background: '#fff4e6', color: '#d9480f', border: '1px solid #ffd8a8' }}>
+                <span>⚖️ Tác giả bài viết đã gửi đơn kháng cáo. Vui lòng xem xét khôi phục hoặc bác bỏ.</span>
+              </div>
+            )}
+
+            {report.Status === 4 && (
+              <div className="report-status-notice" style={{ background: '#e6fcf5', color: '#0ca678', border: '1px solid #b2f2bb' }}>
+                <span>🎉 Kháng cáo đã được chấp thuận! Bài viết đã được khôi phục trên hệ thống.</span>
+              </div>
+            )}
+
+            {report.Status === 5 && (
+              <div className="report-status-notice rejected-notice">
+                <span>🚫 Kháng cáo của người dùng đã bị bác bỏ. Bài viết tiếp tục bị ẩn.</span>
               </div>
             )}
 
@@ -249,6 +322,25 @@ export default function ReportDetailModal({ report, onClose, onApprove, onReject
                     disabled={actioning}
                   >
                     {actioning ? '⏳ Đang xử lý...' : '✕ Từ chối báo cáo'}
+                  </button>
+                </>
+              )}
+
+              {report.Status === 3 && (
+                <>
+                  <button
+                    className="btn-approve-modal btn-appeal-accept"
+                    onClick={handleAcceptAppealAction}
+                    disabled={actioning}
+                  >
+                    {actioning ? '⏳ Đang xử lý...' : '✓ Chấp thuận kháng cáo (Khôi phục bài)'}
+                  </button>
+                  <button
+                    className="btn-reject-modal btn-appeal-reject"
+                    onClick={handleRejectAppealAction}
+                    disabled={actioning}
+                  >
+                    {actioning ? '⏳ Đang xử lý...' : '✕ Bác bỏ kháng cáo'}
                   </button>
                 </>
               )}

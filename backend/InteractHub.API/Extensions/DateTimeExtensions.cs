@@ -6,32 +6,36 @@ namespace InteractHub.API.Extensions;
 public static class DateTimeExtensions
 {
     /// <summary>
-    /// Tính khoảng thời gian từ bây giờ (ví dụ: "2 hours ago")
+    /// Tính khoảng thời gian từ bây giờ (ví dụ: "vừa xong", "2 giờ trước")
     /// </summary>
     public static string GetTimeAgo(this DateTime dateTime)
     {
-        var timeSpan = DateTime.Now - dateTime;
+        var utcDateTime = dateTime.Kind == DateTimeKind.Unspecified
+            ? DateTime.SpecifyKind(dateTime, DateTimeKind.Utc)
+            : dateTime.ToUniversalTime();
+
+        var timeSpan = DateTime.UtcNow - utcDateTime;
 
         if (timeSpan.TotalSeconds < 60)
-            return "just now";
+            return "vừa xong";
 
         if (timeSpan.TotalMinutes < 60)
-            return $"{(int)timeSpan.TotalMinutes} minute{((int)timeSpan.TotalMinutes > 1 ? "s" : "")} ago";
+            return $"{(int)timeSpan.TotalMinutes} phút trước";
 
         if (timeSpan.TotalHours < 24)
-            return $"{(int)timeSpan.TotalHours} hour{((int)timeSpan.TotalHours > 1 ? "s" : "")} ago";
+            return $"{(int)timeSpan.TotalHours} giờ trước";
 
         if (timeSpan.TotalDays < 30)
-            return $"{(int)timeSpan.TotalDays} day{((int)timeSpan.TotalDays > 1 ? "s" : "")} ago";
+            return $"{(int)timeSpan.TotalDays} ngày trước";
 
         if (timeSpan.TotalDays < 365)
         {
             var months = (int)(timeSpan.TotalDays / 30);
-            return $"{months} month{(months > 1 ? "s" : "")} ago";
+            return $"{months} tháng trước";
         }
 
         var years = (int)(timeSpan.TotalDays / 365);
-        return $"{years} year{(years > 1 ? "s" : "")} ago";
+        return $"{years} năm trước";
     }
 
     /// <summary>

@@ -4,5 +4,8 @@ public enum ReportStatus
 {
     Pending = 0,
     ApprovedViolation = 1,
-    Rejected = 2
+    Rejected = 2,
+    Appealed = 3,
+    AppealApproved = 4,
+    AppealRejected = 5
 }

@@ -469,3 +469,52 @@
     width: 100%;
   }
 }
+
+/* Appeal Highlight Section */
+.appeal-highlight-section {
+  background: #fff9db !important;
+  border-left: 4px solid #f59f00 !important;
+  border-radius: 8px !important;
+  padding: 14px 16px !important;
+}
+
+.appeal-box {
+  background: white;
+  border-radius: 6px;
+  padding: 12px;
+  border: 1px solid #ffe066;
+  margin-top: 8px;
+}
+
+.appeal-text {
+  font-size: 14px;
+  color: #333;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.appeal-status-tag {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #fff4e6;
+  color: #d9480f;
+}
+
+.btn-appeal-accept {
+  background: #20c997 !important;
+}
+
+.btn-appeal-accept:hover {
+  background: #12b886 !important;
+}
+
+.btn-appeal-reject {
+  background: #fa5252 !important;
+}
+
+.btn-appeal-reject:hover {
+  background: #e03131 !important;
+}

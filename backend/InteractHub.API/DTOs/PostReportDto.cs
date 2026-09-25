@@ -35,3 +35,8 @@ public class RejectReportDto
 {
     public int ReportId { get; set; }
 }
+
+public class SubmitAppealDto
+{
+    public string Reason { get; set; } = string.Empty;
+}

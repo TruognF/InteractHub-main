@@ -19,5 +19,5 @@ public class Notification
     // Để link tới entity liên quan (Post, Comment, etc.)
     public int? RelatedEntityId {get; set;}
     
-    public DateTime CreatedAt {get; set;} = DateTime.Now;
+    public DateTime CreatedAt {get; set;} = DateTime.UtcNow;
 }

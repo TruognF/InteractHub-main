@@ -191,6 +191,23 @@
   color: #721c24;
 }
 
+.status-badge.appealed {
+  background: #fff4e6;
+  color: #d9480f;
+  border: 1px solid #ffd8a8;
+  font-weight: 700;
+}
+
+.status-badge.appeal-approved {
+  background: #e6fcf5;
+  color: #0ca678;
+}
+
+.status-badge.appeal-rejected {
+  background: #f1f3f5;
+  color: #495057;
+}
+
 .status-badge.unknown {
   background: #e2e3e5;
   color: #383d41;

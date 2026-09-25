@@ -8,6 +8,7 @@ public interface IPostService
     Task<Post?> GetByIdAsync(int id);
     Task<Post> CreateAsync(Post post);
     Task<bool> DeleteAsync(int id);
+    Task<bool> RestoreAsync(int id);
 
     Task<(List<PostResponseDto> Posts, int TotalCount)> GetFeedAsync(int page, int pageSize);
     Task<(List<PostResponseDto> Posts, int TotalCount)> GetUserPostsAsync(string userId, int page, int pageSize);

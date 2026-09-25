@@ -14,9 +14,29 @@ public class UserService : IUserService
         _context = context;
     }
 
+    // Helper: Lấy danh sách ID của tất cả user có role Admin
+    private async Task<List<string>> GetAdminUserIdsAsync()
+    {
+        var adminRoleId = await _context.Roles
+            .Where(r => r.Name == "Admin")
+            .Select(r => r.Id)
+            .FirstOrDefaultAsync();
+
+        if (adminRoleId == null) return new List<string>();
+
+        return await _context.UserRoles
+            .Where(ur => ur.RoleId == adminRoleId)
+            .Select(ur => ur.UserId)
+            .ToListAsync();
+    }
+
     public async Task<List<User>> GetUsersAsync(string? search = null, int take = 50)
     {
-        var query = _context.Users.AsNoTracking();
+        // Lọc Admin ra khỏi kết quả tìm kiếm của User
+        var adminIds = await GetAdminUserIdsAsync();
+
+        var query = _context.Users.AsNoTracking()
+            .Where(u => !adminIds.Contains(u.Id));
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -35,8 +55,11 @@ public class UserService : IUserService
 
         ids = ids.Take(100).ToList();
 
+        // Lọc Admin ra khỏi kết quả batch fetch
+        var adminIds = await GetAdminUserIdsAsync();
+
         return await _context.Users.AsNoTracking()
-            .Where(u => ids.Contains(u.Id))
+            .Where(u => ids.Contains(u.Id) && !adminIds.Contains(u.Id))
             .ToListAsync();
     }
 

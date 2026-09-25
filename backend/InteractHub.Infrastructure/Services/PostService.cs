@@ -39,6 +39,22 @@ public class PostService : IPostService
         return true;
     }
 
+    public async Task<bool> RestoreAsync(int id)
+    {
+        var post = await _context.Posts.FindAsync(id);
+        if (post == null)
+        {
+            return false;
+        }
+
+        // Khôi phục bài viết sau khi được chấp nhận kháng cáo
+        post.IsDeleted = false;
+        post.UpdatedAt = DateTime.UtcNow;
+        _context.Posts.Update(post);
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
     public async Task<List<Post>> GetAllAsync()
     {
         return await _context.Posts.AsNoTracking().Where(p => !p.IsDeleted).ToListAsync();

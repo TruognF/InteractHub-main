@@ -195,17 +195,22 @@ public class PostReportsController : ControllerBase
     }
 
     /// <summary>
-    /// Get report by ID (admin only)
+    /// Get report by ID (admin or post owner/reporter)
     /// </summary>
     [HttpGet("{id}")]
-    [Authorize(Roles = "Admin")]
     [ProducesResponseType(typeof(ApiResponse<PostReportResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(int id)
     {
+        var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var isAdmin = User.IsInRole("Admin");
+
         var report = await _postReportService.GetByIdAsync(id);
         if (report == null)
             return this.NotFoundResponse("Report not found");
+
+        if (!isAdmin && report.ReporterUserId != currentUserId && report.Post?.UserId != currentUserId)
+            return this.ForbiddenResponse("Bạn không có quyền xem báo cáo này");
 
         // Use helper for full mapping including Post + ReporterUser
         var reportDto = MapToDto(report);
@@ -309,6 +314,7 @@ public class PostReportsController : ControllerBase
                             UserId = postOwner.Id,
                             Content = notificationContent,
                             Type = NotificationType.System,
+                            RelatedEntityId = report.Id,
                             CreatedAt = DateTime.UtcNow
                         });
                         Console.WriteLine($"[PostReportsController] 📬 Notification sent to {postOwner.Id}");
@@ -447,5 +453,162 @@ public class PostReportsController : ControllerBase
 
         Console.WriteLine($"[PostReportsController] 🗑️ Report {id} deleted by admin {adminId}");
         return this.SuccessResponse(message: "Xóa báo cáo thành công");
+    }
+
+    /// <summary>
+    /// Submit an appeal for a reported/deleted post (user side)
+    /// </summary>
+    [HttpPost("{id}/appeal")]
+    [ProducesResponseType(typeof(ApiResponse<PostReportResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SubmitAppeal(int id, [FromBody] SubmitAppealDto dto)
+    {
+        var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(currentUserId))
+            return this.UnauthorizedResponse("User not authenticated");
+
+        if (string.IsNullOrWhiteSpace(dto.Reason))
+            return this.ErrorResponse("Vui lòng nhập lý do kháng cáo");
+
+        var report = await _postReportService.GetByIdAsync(id);
+        if (report == null)
+            return this.NotFoundResponse("Báo cáo không tồn tại");
+
+        // Kiểm tra quyền: chỉ tác giả bài viết mới được kháng cáo
+        if (report.Post != null && report.Post.UserId != currentUserId)
+        {
+            return this.ForbiddenResponse("Bạn chỉ có thể kháng cáo bài viết của chính mình");
+        }
+
+        if (report.Status != ReportStatus.ApprovedViolation && report.Status != ReportStatus.Appealed)
+        {
+            return this.ErrorResponse("Chỉ có thể kháng cáo bài viết đã bị xử lý vi phạm");
+        }
+
+        // Làm sạch và chèn nội dung kháng cáo vào Detail
+        string cleanDetail = report.Detail ?? "";
+        var appealMarker = "[KHÁNG CÁO]:";
+        int markerIndex = cleanDetail.IndexOf(appealMarker);
+        if (markerIndex >= 0)
+        {
+            cleanDetail = cleanDetail.Substring(0, markerIndex).Trim();
+        }
+
+        report.Detail = string.IsNullOrWhiteSpace(cleanDetail)
+            ? $"{appealMarker} {dto.Reason.Trim()}"
+            : $"{cleanDetail}\n\n{appealMarker} {dto.Reason.Trim()}";
+
+        report.Status = ReportStatus.Appealed;
+        await _postReportService.UpdateAsync(report);
+
+        Console.WriteLine($"[PostReportsController] ⚖️ Appeal submitted for report {id} by user {currentUserId}");
+
+        return this.SuccessResponse(MapToDto(report), "Đã gửi đơn kháng cáo thành công. Quản trị viên sẽ xem xét lại bài viết.");
+    }
+
+    /// <summary>
+    /// Accept appeal and restore post (admin only)
+    /// </summary>
+    [HttpPost("{id}/accept-appeal")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(ApiResponse<PostReportResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AcceptAppeal(int id)
+    {
+        var adminId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(adminId))
+            return this.UnauthorizedResponse("Admin not authenticated");
+
+        var report = await _postReportService.GetByIdAsync(id);
+        if (report == null)
+            return this.NotFoundResponse("Báo cáo không tồn tại");
+
+        if (report.Status != ReportStatus.Appealed)
+            return this.ErrorResponse("Báo cáo này không ở trạng thái đang kháng cáo");
+
+        // Khôi phục lại bài viết
+        if (report.PostId > 0)
+        {
+            await _postService.RestoreAsync(report.PostId);
+            Console.WriteLine($"[PostReportsController] 🔄 Post {report.PostId} restored due to accepted appeal");
+        }
+
+        report.Status = ReportStatus.AppealApproved;
+        report.ReviewedByAdminId = adminId;
+        report.ReviewedAt = DateTime.UtcNow;
+        await _postReportService.UpdateAsync(report);
+
+        // Gửi thông báo cho tác giả bài viết
+        string postOwnerId = report.Post?.UserId ?? "";
+        if (!string.IsNullOrEmpty(postOwnerId))
+        {
+            try
+            {
+                await _notificationService.CreateAsync(new Notification
+                {
+                    UserId = postOwnerId,
+                    Content = "Kháng cáo của bạn đã được chấp thuận! Bài viết đã được khôi phục thành công.",
+                    Type = NotificationType.System,
+                    RelatedEntityId = report.Id,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+            catch (Exception notifEx)
+            {
+                Console.WriteLine($"[PostReportsController] ⚠️ Notification error: {notifEx.Message}");
+            }
+        }
+
+        return this.SuccessResponse(MapToDto(report), "Đã chấp nhận kháng cáo và khôi phục bài viết thành công");
+    }
+
+    /// <summary>
+    /// Reject appeal (admin only)
+    /// </summary>
+    [HttpPost("{id}/reject-appeal")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(ApiResponse<PostReportResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RejectAppeal(int id)
+    {
+        var adminId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(adminId))
+            return this.UnauthorizedResponse("Admin not authenticated");
+
+        var report = await _postReportService.GetByIdAsync(id);
+        if (report == null)
+            return this.NotFoundResponse("Báo cáo không tồn tại");
+
+        if (report.Status != ReportStatus.Appealed)
+            return this.ErrorResponse("Báo cáo này không ở trạng thái đang kháng cáo");
+
+        report.Status = ReportStatus.AppealRejected;
+        report.ReviewedByAdminId = adminId;
+        report.ReviewedAt = DateTime.UtcNow;
+        await _postReportService.UpdateAsync(report);
+
+        // Gửi thông báo cho tác giả bài viết
+        string postOwnerId = report.Post?.UserId ?? "";
+        if (!string.IsNullOrEmpty(postOwnerId))
+        {
+            try
+            {
+                await _notificationService.CreateAsync(new Notification
+                {
+                    UserId = postOwnerId,
+                    Content = "Kháng cáo của bạn đã bị từ chối sau khi Quản trị viên xem xét lại.",
+                    Type = NotificationType.System,
+                    RelatedEntityId = report.Id,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+            catch (Exception notifEx)
+            {
+                Console.WriteLine($"[PostReportsController] ⚠️ Notification error: {notifEx.Message}");
+            }
+        }
+
+        return this.SuccessResponse(MapToDto(report), "Đã từ chối kháng cáo");
     }
 }

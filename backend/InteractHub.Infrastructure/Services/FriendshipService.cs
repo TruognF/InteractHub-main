@@ -74,6 +74,21 @@ public class FriendshipService : IFriendshipService
         if (senderId == receiverId)
             throw new InvalidOperationException("Không thể gửi lời mời kết bạn cho chính mình");
 
+        // Chặn gửi kết bạn cho tài khoản Admin
+        var adminRoleId = await _context.Roles
+            .Where(r => r.Name == "Admin")
+            .Select(r => r.Id)
+            .FirstOrDefaultAsync();
+
+        if (adminRoleId != null)
+        {
+            var isReceiverAdmin = await _context.UserRoles
+                .AnyAsync(ur => ur.UserId == receiverId && ur.RoleId == adminRoleId);
+
+            if (isReceiverAdmin)
+                throw new InvalidOperationException("Không thể gửi lời mời kết bạn cho tài khoản này");
+        }
+
         // Kiểm tra xem đã có request hay không
         var existingRequest = await _context.Friendships
             .FirstOrDefaultAsync(f =>

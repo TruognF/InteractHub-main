@@ -661,9 +661,52 @@ export async function getAllReports(page = 1, pageSize = 20) {
 }
 
 export async function getReportById(reportId) {
-  const token = localStorage.getItem('adminToken');
+  const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
   const response = await fetch(`${API_BASE}/postreports/${reportId}`, {
     headers: { 'Authorization': `Bearer ${token}` }
+  });
+
+  const data = await handleResponse(response);
+  return data?.Data || null;
+}
+
+export async function submitReportAppeal(reportId, reason) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/postreports/${reportId}/appeal`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ reason })
+  });
+
+  const data = await handleResponse(response);
+  return data?.Data || null;
+}
+
+export async function acceptReportAppeal(reportId) {
+  const token = localStorage.getItem('adminToken');
+  const response = await fetch(`${API_BASE}/postreports/${reportId}/accept-appeal`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    }
+  });
+
+  const data = await handleResponse(response);
+  return data?.Data || null;
+}
+
+export async function rejectReportAppeal(reportId) {
+  const token = localStorage.getItem('adminToken');
+  const response = await fetch(`${API_BASE}/postreports/${reportId}/reject-appeal`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    }
   });
 
   const data = await handleResponse(response);
