@@ -94,6 +94,36 @@ export default function HomePage() {
     return `${years} năm trước`;
   };
 
+  const isPostRelatedNotification = (item) => {
+    if (!item || !item.RelatedEntityId) return false;
+    const content = item.Content || item.title || '';
+    if (content.includes('bị gỡ') || content.includes('Kháng cáo') || content.includes('kháng cáo')) {
+      return false;
+    }
+    const typeStr = String(item.Type || item.type || '').toLowerCase();
+    if (
+      typeStr === 'postreport' ||
+      typeStr === '6' ||
+      typeStr === 'friendrequest' ||
+      typeStr === '0' ||
+      typeStr === 'friendrequestaccepted' ||
+      typeStr === '1'
+    ) {
+      return false;
+    }
+    const postTypes = ['like', 'comment', 'commentreply', 'postshared', 'friendpublishedpost', '2', '3', '4', '9', '10'];
+    if (postTypes.includes(typeStr)) {
+      return true;
+    }
+    return (
+      content.toLowerCase().includes('thích') ||
+      content.toLowerCase().includes('bình luận') ||
+      content.toLowerCase().includes('bài đăng') ||
+      content.toLowerCase().includes('bài viết') ||
+      content.toLowerCase().includes('chia sẻ')
+    );
+  };
+
   const normalizeSearchText = (text = '') => {
     return text
       .toString()
@@ -1788,15 +1818,28 @@ export default function HomePage() {
                 ) : (
                   notifications.map((item) => {
                     const isModerationNotice = item.Content && (item.Content.includes('bị gỡ') || item.Content.includes('Kháng cáo') || item.Content.includes('kháng cáo'));
+                    const isPostNotification = isPostRelatedNotification(item);
+
                     return (
-                      <div key={item.Id || item.id} className="notification-item">
+                      <div
+                        key={item.Id || item.id}
+                        className={`notification-item ${isPostNotification ? 'clickable-notification' : ''}`}
+                        onClick={() => {
+                          if (isPostNotification) {
+                            navigate(`/post/${item.RelatedEntityId}`);
+                          }
+                        }}
+                      >
                         <p className="notification-title">{item.Content || item.title}</p>
                         <p className="notification-time">{formatTimeAgo(item.CreatedAt || item.createdAt) || item.TimeAgo || item.time}</p>
                         {isModerationNotice && item.RelatedEntityId && (
                           <div style={{ marginTop: '8px' }}>
                             <button
                               type="button"
-                              onClick={() => setAppealingReportId(item.RelatedEntityId)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setAppealingReportId(item.RelatedEntityId);
+                              }}
                               style={{
                                 padding: '5px 12px',
                                 fontSize: '12px',
