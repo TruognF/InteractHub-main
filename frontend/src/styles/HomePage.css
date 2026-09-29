@@ -104,6 +104,23 @@
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.05);
 }
 
+.notification-item.clickable-notification {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+}
+
+.notification-item.clickable-notification:hover {
+  background: #f8f6ff;
+  border-left-color: #6b4fc7;
+  transform: translateX(3px);
+  box-shadow: 0 4px 12px rgba(107, 79, 199, 0.12);
+}
+
+.notification-item.clickable-notification:active {
+  transform: translateX(1px);
+}
+
 .notification-title {
   margin: 0 0 6px;
   color: #322d5a;

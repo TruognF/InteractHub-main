@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TRD – Technical Requirement Document (InteractHub)</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: linear-gradient(135deg, #1b89be, #12638a);
+      padding: 30px;
+      min-height: 100vh;
+      color: #333;
+    }
+    .header-title {
+      color: #fff;
+      font-size: 26px;
+      font-weight: 800;
+      margin-bottom: 25px;
+      letter-spacing: 0.5px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: #ffffff;
+      border: 3px solid #ffcc00;
+      border-radius: 16px;
+      padding: 20px 24px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+      position: relative;
+    }
+    .card-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: #111;
+      margin-bottom: 14px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+    .req-list {
+      list-style: none;
+    }
+    .req-item {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 9px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .req-item:last-child {
+      margin-bottom: 0;
+    }
+    .req-code {
+      font-weight: 800;
+      color: #0b5394;
+      min-width: 48px;
+      font-size: 14.5px;
+    }
+    .req-desc {
+      color: #222;
+      flex: 1;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 700;
+      margin-left: 6px;
+    }
+    .badge-rule { background: #fee2e2; color: #991b1b; }
+    .badge-ok { background: #dcfce7; color: #166534; }
+  </style>
+</head>
+<body>
+
+  <div class="header-title">❖ Technical Requirement Document (TRD) – InteractHub</div>
+
+  <div class="grid">
+
+    <!-- 1. Login -->
+    <div class="card">
+      <div class="card-title">1. Đăng nhập người dùng (Login)</div>
+      <ul class="req-list">
+        <li class="req-item"><span class="req-code">T01</span><span class="req-desc">User-ID / UserName must not be blank.</span></li>
+        <li class="req-item"><span class="req-code">T02</span><span class="req-desc">Password must not be blank.</span></li>
+        <li class="req-item"><span class="req-code">T03</span><span class="req-desc">User account with Admin role is rejected (must use Admin Login endpoint).</span></li>
+        <li class="req-item"><span class="req-code">T04</span><span class="req-desc">If credentials are valid: Generate JWT Bearer Token (60 min) and return User profile.</span></li>
+        <li class="req-item"><span class="req-code">T05</span><span class="req-desc">If invalid username or password: Return HTTP 401 Unauthorized.</span></li>
+      </ul>
+    </div>
+
+    <!-- 2. Registration -->
+    <div class="card">
+      <div class="card-title">2. Đăng ký tài khoản (Register)</div>
+      <ul class="req-list">
+        <li class="req-item"><span class="req-code">T06</span><span class="req-desc">UserName must be 3–20 characters, alphanumeric and underscore only.</span></li>
+        <li class="req-item"><span class="req-code">T07</span><span class="req-desc">Email must be valid format and not already exist in database.</span></li>
+        <li class="req-item"><span class="req-code">T08</span><span class="req-desc">FullName must be between 2 and 100 characters.</span></li>
+        <li class="req-item"><span class="req-code">T09</span><span class="req-desc">Password must be &ge; 8 characters with upper, lower, digit and special char.</span></li>
+        <li class="req-item"><span class="req-code">T10</span><span class="req-desc">Password must be hashed with ASP.NET Core Identity PBKDF2 before storage.</span></li>
+        <li class="req-item"><span class="req-code">T11</span><span class="req-desc">If valid: Assign default role "User", generate token, return HTTP 201 Created.</span></li>
+      </ul>
+    </div>
+
+    <!-- 3. Admin Auth -->
+    <div class="card">
+      <div class="card-title">3. Đăng nhập Admin (Admin Authentication)</div>
+      <ul class="req-list">
+        <li class="req-item"><span class="req-code">T12</span><span class="req-desc">Admin login endpoint /api/admin/login is AllowAnonymous.</span></li>
+        <li class="req-item"><span class="req-code">T13</span><span class="req-desc">Only users possessing the "Admin" role can authenticate here.</span></li>
+        <li class="req-item"><span class="req-code">T14</span><span class="req-desc">Non-admin users attempting login are rejected with HTTP 403 Forbidden.</span></li>
+        <li class="req-item"><span class="req-code">T15</span><span class="req-desc">Admin token expiration is set to 120 minutes with claim IsAdmin=true.</span></li>
+      </ul>
+    </div>
+
+    <!-- 4. Posts -->
+    <div class="card">
+      <div class="card-title">4. Quản lý Bài viết (Posts)</div>
+      <ul class="req-list">
+        <li class="req-item"><span class="req-code">T16</span><span class="req-desc">Post Content must not be empty unless an image is attached.</span></li>
+        <li class="req-item"><span class="req-code">T17</span><span class="req-desc">Attached image must not exceed 5MB and must be JPEG/PNG/GIF/WebP.</span></li>
+        <li class="req-item"><span class="req-code">T18</span><span class="req-desc">Feed posts exclude group posts (GroupId == null). Pagination required.</span></li>
+        <li class="req-item"><span class="req-code">T19</span><span class="req-desc">Post modification (Edit) is NOT allowed to ensure interaction integrity.</span></li>
+        <li class="req-item"><span class="req-code">T20</span><span class="req-desc">Only post owner can delete their post (checked via current JWT UserId).</span></li>
+        <li class="req-item"><span class="req-code">T21</span><span class="req-desc">Shared post references original post; caption is optional.</span></li>
+      </ul>
+    </div>
+
+    <!-- 5. Comments -->
+    <div class="card">
+      <div class="card-title">5. Bình luận (Comments)</div>
+      <ul class="req-list">
+        <li class="req-item"><span class="req-code">T22</span><span class="req-desc">Comment Content must not be blank.</span></li>
+        <li class="req-item"><span class="req-code">T23</span><span class="req-desc">PostId must exist in database.</span></li>
+        <li class="req-item"><span class="req-code">T24</span><span class="req-desc">Only author can edit comment (PUT /api/Comments/{id}).</span></li>
+        <li class="req-item"><span class="req-code">T25</span><span class="req-desc">Only author can delete comment (DELETE /api/Comments/{id}).</span></li>
+        <li class="req-item"><span class="req-code">T26</span><span class="req-desc">Emits CommentAdded via SignalR CommentHub to all post viewers.</span></li>
+      </ul>
+    </div>
+
+    <!-- 6. Likes -->
+    <div class="card">
+      <div class="card-title">6. Thích bài viết (Likes)</div>
+      <ul class="req-list">
+        <li class="req-item"><span class="req-code">T27</span><span class="req-desc">Target PostId must exist in database.</span></li>
+        <li class="req-item"><span class="req-code">T28</span><span class="req-desc">Unique constraint on (PostId + UserId) prevents duplicate likes.</span></li>
+        <li class="req-item"><span class="req-code">T29</span><span class="req-desc">Users can only delete their own like via DELETE .../user/{userId}.</span></li>
+        <li class="req-item"><span class="req-code">T30</span><span class="req-desc">Like count must be computed via database Count() directly.</span></li>
+      </ul>
+    </div>
+
+    <!-- 7. Friendships -->
+    <div class="card">
+      <div class="card-title">7. Kết bạn & Quan hệ (Friendships)</div>
+      <ul class="req-list">
+        <li class="req-item"><span class="req-code">T31</span><span class="req-desc">Users cannot send friend request to themselves (UserId != FriendId).</span></li>
+        <li class="req-item"><span class="req-code">T32</span><span class="req-desc">New friend requests start with Status = Pending(0).</span></li>
+        <li class="req-item"><span class="req-code">T33</span><span class="req-desc">Only recipient can Accept(1) or Decline(2) pending friend request.</span></li>
+        <li class="req-item"><span class="req-code">T34</span><span class="req-desc">Unfriend requires current relationship Status = Accepted.</span></li>
+        <li class="req-item"><span class="req-code">T35</span><span class="req-desc">Blocked(3) status terminates messaging and friend request visibility.</span></li>
+      </ul>
+    </div>
+
+    <!-- 8. Messaging -->
+    <div class="card">
+      <div class="card-title">8. Nhắn tin thời gian thực (Messaging)</div>
+      <ul class="req-list">
+        <li class="req-item"><span class="req-code">T36</span><span class="req-desc">Message Content must not be blank.</span></li>
+        <li class="req-item"><span class="req-code">T37</span><span class="req-desc">1-1 chat requires relationship Status = Accepted before SignalR join.</span></li>
+        <li class="req-item"><span class="req-code">T38</span><span class="req-desc">Group chat requires valid GroupMembership for the sender.</span></li>
+        <li class="req-item"><span class="req-code">T39</span><span class="req-desc">Dispatches ReceiveMessage event to recipient via MessageHub &lt; 1s.</span></li>
+        <li class="req-item"><span class="req-code">T40</span><span class="req-desc">Mark as read updates IsRead = true only for recipient's messages.</span></li>
+      </ul>
+    </div>
+
+    <!-- 9. Groups -->
+    <div class="card">
+      <div class="card-title">9. Nhóm cộng đồng (Groups)</div>
+      <ul class="req-list">
+        <li class="req-item"><span class="req-code">T41</span><span class="req-desc">Group Name is required. Unique URL Slug is generated automatically.</span></li>
+        <li class="req-item"><span class="req-code">T42</span><span class="req-desc">Creator is automatically registered as first member in GroupMemberships.</span></li>
+        <li class="req-item"><span class="req-code">T43</span><span class="req-desc">Join requires non-membership; Leave requires existing membership.</span></li>
+        <li class="req-item"><span class="req-code">T44</span><span class="req-desc">Membership changes emit GroupMemberCountUpdated via SignalR.</span></li>
+      </ul>
+    </div>
+
+    <!-- 10. Stories -->
+    <div class="card">
+      <div class="card-title">10. Khoảnh khắc 24h (Stories)</div>
+      <ul class="req-list">
+        <li class="req-item"><span class="req-code">T45</span><span class="req-desc">Story must contain ImageUrl or Content text.</span></li>
+        <li class="req-item"><span class="req-code">T46</span><span class="req-desc">Default ExpireAt is exactly CreatedAt + 24 hours.</span></li>
+        <li class="req-item"><span class="req-code">T47</span><span class="req-desc">Stories past 24 hours are excluded from active story feeds.</span></li>
+        <li class="req-item"><span class="req-code">T48</span><span class="req-desc">Only owner or Accepted friends can view active stories.</span></li>
+        <li class="req-item"><span class="req-code">T49</span><span class="req-desc">Only owner can delete their story prior to expiration.</span></li>
+      </ul>
+    </div>
+
+    <!-- 11. Post Reports & Moderation -->
+    <div class="card">
+      <div class="card-title">11. Báo cáo & Kiểm duyệt (Post Reports)</div>
+      <ul class="req-list">
+        <li class="req-item"><span class="req-code">T50</span><span class="req-desc">Users cannot report their own post (post.UserId != currentUserId).</span></li>
+        <li class="req-item"><span class="req-code">T51</span><span class="req-desc">Duplicate Pending report on same post by same user is rejected.</span></li>
+        <li class="req-item"><span class="req-code">T52</span><span class="req-desc">Reason must match 1 of 7 defined enums; Detail must be &ge; 10 chars.</span></li>
+        <li class="req-item"><span class="req-code">T53</span><span class="req-desc">Approve report: Save audit copy into PostDeletionLog, delete post, notify author.</span></li>
+        <li class="req-item"><span class="req-code">T54</span><span class="req-desc">Reject report: Update report status to Rejected, post is preserved.</span></li>
+      </ul>
+    </div>
+
+    <!-- 12. Search & Security -->
+    <div class="card">
+      <div class="card-title">12. Tìm kiếm & Bảo mật (Search & System Security)</div>
+      <ul class="req-list">
+        <li class="req-item"><span class="req-code">T55</span><span class="req-desc">All search keywords must be sanitized by QueryHelper (anti-SQLi / XSS).</span></li>
+        <li class="req-item"><span class="req-code">T56</span><span class="req-desc">User search is case-insensitive, capped at max 50 results.</span></li>
+        <li class="req-item"><span class="req-code">T57</span><span class="req-desc">Search results must never expose PasswordHash or SecurityStamp fields.</span></li>
+        <li class="req-item"><span class="req-code">T58</span><span class="req-desc">Client search inputs must enforce Debounce &ge; 300ms.</span></li>
+        <li class="req-item"><span class="req-code">T59</span><span class="req-desc">CORS AllowLocalhost restricts origins to 3000, 3001, 5142.</span></li>
+        <li class="req-item"><span class="req-code">T60</span><span class="req-desc">SignalR client must configure automatic reconnect withAutomaticReconnect().</span></li>
+      </ul>
+    </div>
+
+  </div>
+
+</body>
+</html>

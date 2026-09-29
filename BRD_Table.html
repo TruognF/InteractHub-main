@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BRD – InteractHub</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #1a8abf;
+      padding: 40px 30px;
+      min-height: 100vh;
+    }
+    .title {
+      color: #fff;
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      letter-spacing: 0.5px;
+    }
+    .title span {
+      color: #ffe680;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border-radius: 4px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    }
+    thead tr {
+      background: #c8ddb0;
+    }
+    thead th {
+      padding: 13px 14px;
+      text-align: left;
+      font-size: 15px;
+      font-weight: 700;
+      color: #222;
+      border-right: 1px solid #b7cda0;
+    }
+    thead th:last-child { border-right: none; }
+    tbody tr {
+      border-bottom: 1px solid #dde8c8;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody td {
+      padding: 13px 14px;
+      vertical-align: top;
+      font-size: 14px;
+      color: #222;
+      border-right: 1px solid #e0e8d0;
+    }
+    tbody td:last-child { border-right: none; }
+    .br-num {
+      font-weight: 700;
+      font-size: 15px;
+      color: #1a5fa0;
+      white-space: nowrap;
+    }
+    .module-name {
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .roles {
+      font-size: 13.5px;
+      line-height: 1.7;
+    }
+    .role-tag {
+      display: inline-block;
+      padding: 1px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      margin: 2px 2px 2px 0;
+    }
+    .tag-user   { background: #d1eaff; color: #0b5394; }
+    .tag-admin  { background: #fde8d8; color: #b94a00; }
+    .tag-guest  { background: #e8f5e2; color: #2e6b1e; }
+    .desc-role  { font-weight: 700; color: #1a5fa0; }
+    .desc-role.admin { color: #b94a00; }
+    .desc-role.guest { color: #2e6b1e; }
+    p.desc-line { margin-bottom: 5px; line-height: 1.55; font-size: 13.5px; }
+    p.desc-line:last-child { margin-bottom: 0; }
+    tbody tr:nth-child(odd) { background: #f7fbf2; }
+    tbody tr:nth-child(even) { background: #ffffff; }
+    .col-br    { width: 5%; }
+    .col-mod   { width: 17%; }
+    .col-roles { width: 16%; }
+    .col-desc  { width: 62%; }
+  </style>
+</head>
+<body>
+  <div class="title">❖ Business Requirement Document &nbsp;<span>(BRD)</span> &nbsp;– InteractHub</div>
+  <table>
+    <thead>
+      <tr>
+        <th class="col-br">BR#</th>
+        <th class="col-mod">Module Name</th>
+        <th class="col-roles">Applicable Roles</th>
+        <th class="col-desc">Description</th>
+      </tr>
+    </thead>
+    <tbody>
+
+      <!-- B1 -->
+      <tr>
+        <td class="br-num">B1</td>
+        <td class="module-name">Đăng ký &amp; Đăng nhập (Authentication)</td>
+        <td class="roles">
+          <span class="role-tag tag-guest">Guest</span><br>
+          <span class="role-tag tag-admin">Admin</span>
+        </td>
+        <td>
+          <p class="desc-line"><span class="desc-role guest">Guest:</span> Người dùng chưa có tài khoản có thể đăng ký bằng <em>Username, Email và Password</em>. Người dùng đã có tài khoản đăng nhập tại trang Login để nhận JWT Token truy cập hệ thống.</p>
+          <p class="desc-line"><span class="desc-role admin">Admin:</span> Quản trị viên đăng nhập qua cổng riêng biệt <code>/api/admin/login</code> với xác thực đặc quyền và nhận JWT Token thời hạn dài hơn (120 phút). Sau đăng nhập, giao diện chuyển hướng đến Admin Dashboard riêng biệt.</p>
+        </td>
+      </tr>
+
+      <!-- B2 -->
+      <tr>
+        <td class="br-num">B2</td>
+        <td class="module-name">Quản lý Hồ sơ cá nhân (User Profile)</td>
+        <td class="roles">
+          <span class="role-tag tag-user">User</span>
+        </td>
+        <td>
+          <p class="desc-line"><span class="desc-role">User:</span> Người dùng có thể xem hồ sơ cá nhân của mình hoặc xem hồ sơ của người dùng khác (tên, tiểu sử, ảnh đại diện, danh sách bài viết). Chỉ chủ tài khoản mới được phép chỉnh sửa tên hiển thị (FullName), tiểu sử (Bio) và thay đổi ảnh đại diện (tối đa 5MB, định dạng JPEG/PNG/GIF/WebP). Thay đổi được đồng bộ tức thì đến các màn hình bạn bè qua SignalR <em>UserProfileUpdated</em>.</p>
+        </td>
+      </tr>
+
+      <!-- B3 -->
+      <tr>
+        <td class="br-num">B3</td>
+        <td class="module-name">Bảng tin &amp; Bài viết (News Feed &amp; Posts)</td>
+        <td class="roles">
+          <span class="role-tag tag-user">User</span><br>
+          <span class="role-tag tag-admin">Admin</span>
+        </td>
+        <td>
+          <p class="desc-line"><span class="desc-role">User:</span> Xem bảng tin phân trang với bài viết của bạn bè và bản thân (mới nhất lên đầu). Đăng bài viết mới kèm ảnh (tuỳ chọn). Chia sẻ lại bài viết của người khác kèm caption. Bài viết mới lập tức hiển thị trên bảng tin của bạn bè qua SignalR <em>PostCreated</em>. Chỉ tác giả mới được xóa bài của mình.</p>
+          <p class="desc-line"><span class="desc-role admin">Admin:</span> Không tự đăng bài, nhưng có quyền gỡ bỏ (xóa) bất kỳ bài viết nào vi phạm qua quy trình xử lý báo cáo.</p>
+        </td>
+      </tr>
+
+      <!-- B4 -->
+      <tr>
+        <td class="br-num">B4</td>
+        <td class="module-name">Bình luận (Comments)</td>
+        <td class="roles">
+          <span class="role-tag tag-user">User</span>
+        </td>
+        <td>
+          <p class="desc-line"><span class="desc-role">User:</span> Bình luận vào bất kỳ bài viết nào đang hiển thị trên bảng tin. Tác giả bình luận có thể chỉnh sửa hoặc xóa bình luận của mình. Bình luận mới được đồng bộ ngay lập tức đến tất cả người đang xem bài viết qua SignalR <em>CommentAdded</em>. Khi đăng bình luận, chủ bài viết nhận thông báo tức thì.</p>
+        </td>
+      </tr>
+
+      <!-- B5 -->
+      <tr>
+        <td class="br-num">B5</td>
+        <td class="module-name">Thích bài viết (Likes)</td>
+        <td class="roles">
+          <span class="role-tag tag-user">User</span>
+        </td>
+        <td>
+          <p class="desc-line"><span class="desc-role">User:</span> Bấm "Thích" (Like) bài viết bất kỳ trên bảng tin; bấm lại để "Bỏ thích" (Unlike). Số lượt thích được cập nhật đồng thời trên giao diện của tất cả người xem bài đó qua SignalR <em>PostLiked / PostUnliked</em>. Chủ bài viết nhận thông báo khi có người thích bài của mình.</p>
+        </td>
+      </tr>
+
+      <!-- B6 -->
+      <tr>
+        <td class="br-num">B6</td>
+        <td class="module-name">Kết bạn (Friendships &amp; Networking)</td>
+        <td class="roles">
+          <span class="role-tag tag-user">User</span>
+        </td>
+        <td>
+          <p class="desc-line"><span class="desc-role">User:</span> Gửi lời mời kết bạn đến bất kỳ người dùng nào (trạng thái <em>Pending</em>). Người nhận có thể chấp nhận (trạng thái <em>Accepted</em>) hoặc từ chối. Người dùng có thể hủy kết bạn hoặc chặn (Block) người dùng khác. Kiểm tra trạng thái quan hệ giữa hai người dùng bất kỳ. Chỉ bạn bè đã ở trạng thái <em>Accepted</em> mới có thể nhắn tin 1-1 với nhau.</p>
+        </td>
+      </tr>
+
+      <!-- B7 -->
+      <tr>
+        <td class="br-num">B7</td>
+        <td class="module-name">Nhắn tin tức thời (Real-time Messaging)</td>
+        <td class="roles">
+          <span class="role-tag tag-user">User</span>
+        </td>
+        <td>
+          <p class="desc-line"><span class="desc-role">User:</span> Nhắn tin 1-1 với bạn bè đã kết nối qua WebSocket SignalR. Tin nhắn được phân phối tức thì (độ trễ &lt; 1 giây) đến phòng chat của người nhận qua sự kiện <em>ReceiveMessage</em>. Giao diện hiển thị số tin nhắn chưa đọc (Unread Count) và cho phép đánh dấu đã đọc toàn bộ. Danh sách hội thoại được sắp xếp theo tin nhắn mới nhất và hỗ trợ tìm kiếm lọc nhanh.</p>
+        </td>
+      </tr>
+
+      <!-- B8 -->
+      <tr>
+        <td class="br-num">B8</td>
+        <td class="module-name">Nhóm cộng đồng (Groups)</td>
+        <td class="roles">
+          <span class="role-tag tag-user">User</span>
+        </td>
+        <td>
+          <p class="desc-line"><span class="desc-role">User:</span> Tạo nhóm mới với tên, mô tả và ảnh bìa; mời bạn bè vào nhóm ngay khi tạo. Tham gia hoặc rời nhóm bất kỳ. Đăng bài viết trong phạm vi nhóm; bài viết nhóm chỉ hiển thị cho thành viên và đồng bộ tức thời qua SignalR <em>GroupPostCreated</em>. Tìm kiếm nhóm theo tên và tìm kiếm bài viết nội bộ trong trang chi tiết nhóm.</p>
+        </td>
+      </tr>
+
+      <!-- B9 -->
+      <tr>
+        <td class="br-num">B9</td>
+        <td class="module-name">Khoảnh khắc 24h (Stories)</td>
+        <td class="roles">
+          <span class="role-tag tag-user">User</span>
+        </td>
+        <td>
+          <p class="desc-line"><span class="desc-role">User:</span> Đăng khoảnh khắc (Story) dạng ảnh hoặc văn bản. Story tự động hiển thị trong 24 giờ kể từ thời điểm đăng; sau 24 giờ hệ thống ẩn Story khỏi bảng tin khoảnh khắc của bạn bè. Chỉ tác giả mới có thể xóa Story của mình trước 24 giờ. Story mới được đồng bộ đến bạn bè qua SignalR <em>StoryCreated</em>.</p>
+        </td>
+      </tr>
+
+      <!-- B10 -->
+      <tr>
+        <td class="br-num">B10</td>
+        <td class="module-name">Hashtag &amp; Phân loại nội dung</td>
+        <td class="roles">
+          <span class="role-tag tag-user">User</span>
+        </td>
+        <td>
+          <p class="desc-line"><span class="desc-role">User:</span> Khi đăng bài viết có chứa ký tự <code>#</code> (ví dụ: <em>#congnghe</em>), hệ thống tự động nhận diện và lưu vào bảng Hashtag. Trong bài viết, hashtag được hiển thị dưới dạng liên kết có thể bấm vào để lọc toàn bộ bài viết trong Feed có chứa thẻ đó. Hỗ trợ tìm kiếm hashtag theo tên qua API <code>GET /api/Hashtags/search/{name}</code>.</p>
+        </td>
+      </tr>
+
+      <!-- B11 -->
+      <tr>
+        <td class="br-num">B11</td>
+        <td class="module-name">Thông báo (Notifications)</td>
+        <td class="roles">
+          <span class="role-tag tag-user">User</span>
+          <span class="role-tag tag-admin">Admin</span>
+        </td>
+        <td>
+          <p class="desc-line"><span class="desc-role">User:</span> Nhận thông báo tức thì khi: có người thích bài viết, bình luận bài viết, gửi lời mời kết bạn, có bài viết mới từ bạn bè, hoặc bài viết của mình bị bạn bè chia sẻ. Giao diện hiển thị số thông báo chưa đọc (badge) và hỗ trợ đánh dấu đã đọc tất cả.</p>
+          <p class="desc-line"><span class="desc-role admin">Admin:</span> Hệ thống tự động gửi thông báo loại <em>System</em> đến tác giả bài viết ngay khi Admin phê duyệt báo cáo vi phạm và gỡ bỏ bài viết đó.</p>
+        </td>
+      </tr>
+
+      <!-- B12 -->
+      <tr>
+        <td class="br-num">B12</td>
+        <td class="module-name">Tìm kiếm toàn hệ thống (Search &amp; Discovery)</td>
+        <td class="roles">
+          <span class="role-tag tag-user">User</span>
+        </td>
+        <td>
+          <p class="desc-line"><span class="desc-role">User:</span> Tìm kiếm người dùng theo <em>FullName, Username, Email</em> từ thanh tìm kiếm Header (áp dụng Debounce 300ms, trả về tối đa 50 kết quả). Tìm kiếm bài viết trên Feed theo từ khóa nội dung hoặc tên tác giả. Tìm kiếm và lọc nhóm theo tên trên trang danh sách nhóm. Tìm kiếm nhanh bài viết trong phạm vi một nhóm. Lọc danh sách hội thoại tin nhắn theo tên bạn bè / nhóm chat.</p>
+        </td>
+      </tr>
+
+      <!-- B13 -->
+      <tr>
+        <td class="br-num">B13</td>
+        <td class="module-name">Báo cáo &amp; Kiểm duyệt nội dung (Content Moderation)</td>
+        <td class="roles">
+          <span class="role-tag tag-user">User</span><br>
+          <span class="role-tag tag-admin">Admin</span>
+        </td>
+        <td>
+          <p class="desc-line"><span class="desc-role">User:</span> Báo cáo bài viết vi phạm của người dùng khác (không thể tự báo cáo bài của mình, không báo cáo trùng khi đang có 1 báo cáo Pending). Chọn 1 trong 7 lý do tiêu chuẩn kèm chi tiết mô tả.</p>
+          <p class="desc-line"><span class="desc-role admin">Admin:</span> Xem danh sách tất cả báo cáo và lọc theo trạng thái (Chờ xử lý / Đã duyệt / Từ chối). Xem toàn bộ nội dung bài viết bị báo cáo trước khi ra quyết định. <strong>Phê duyệt</strong> vi phạm → hệ thống tự động lưu vết kiểm toán vào <em>PostDeletionLog</em> → gỡ bài khỏi CSDL → gửi thông báo cảnh báo đến tác giả. <strong>Từ chối</strong> báo cáo → bài viết được giữ nguyên.</p>
+        </td>
+      </tr>
+
+      <!-- B14 -->
+      <tr>
+        <td class="br-num">B14</td>
+        <td class="module-name">Bảng điều khiển &amp; Quản trị hệ thống (Admin Dashboard &amp; User Management)</td>
+        <td class="roles">
+          <span class="role-tag tag-admin">Admin</span>
+        </td>
+        <td>
+          <p class="desc-line"><span class="desc-role admin">Admin:</span> Xem Dashboard thống kê tổng số báo cáo theo từng trạng thái (Chờ xử lý, Đã duyệt, Từ chối); số liệu tự động làm mới mỗi 30 giây. Xem danh sách tất cả tài khoản người dùng kèm vai trò hiện tại. Gán vai trò mới (Assign Role) hoặc thu hồi vai trò (Remove Role) của bất kỳ tài khoản nào. Xóa tài khoản người dùng vi phạm nghiêm trọng. Không thể tự xóa tài khoản của chính mình hoặc tự gỡ vai trò Admin của mình.</p>
+        </td>
+      </tr>
+
+    </tbody>
+  </table>
+</body>
+</html>
