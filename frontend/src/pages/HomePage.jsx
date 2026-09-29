@@ -1081,6 +1081,24 @@ export default function HomePage() {
     navigate(`/user-profile/${userId}`);
   };
 
+  const handlePostCardClick = (e, postId) => {
+    if (!postId) return;
+    if (e.target.closest(
+      'button, ' +
+      '.post-user-info, ' +
+      '.post-menu-container, ' +
+      '.post-actions, ' +
+      '.shared-post-container, ' +
+      '.comment-section, ' +
+      '.shared-post-comments, ' +
+      '.hashtag-link, ' +
+      'input, textarea'
+    )) {
+      return;
+    }
+    navigate(`/post/${postId}`);
+  };
+
   const handlePostsScroll = (e) => {
     const element = e.target;
     const distanceToBottom = element.scrollHeight - (element.scrollTop + element.clientHeight);
@@ -1466,7 +1484,11 @@ export default function HomePage() {
             ) : (
               <>
                 {displayedPosts.map((post) => (
-                <div key={post.Id} className="post-card">
+                <div 
+                  key={post.Id} 
+                  className="post-card"
+                  onClick={(e) => handlePostCardClick(e, post.Id)}
+                >
                   <div className="post-header">
                     <div className="post-user-info post-user-clickable" onClick={() => handleOpenUserProfile(post.UserId || post.userId)}>
                       <div className="post-avatar">

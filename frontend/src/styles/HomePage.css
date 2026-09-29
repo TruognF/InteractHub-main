@@ -378,6 +378,7 @@
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
+  cursor: pointer;
 }
 
 .post-card:hover {
@@ -698,10 +699,31 @@
   background: white;
   border-radius: 12px;
   padding: 20px;
-  height: fit-content;
+  max-height: 50vh;
+  overflow-y: auto;
+  overflow-x: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   position: sticky;
   top: 100px;
+}
+
+/* Custom Scrollbar for Right Sidebar */
+.sidebar-right::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-right::-webkit-scrollbar-track {
+  background: #f5f0ff;
+  border-radius: 8px;
+}
+
+.sidebar-right::-webkit-scrollbar-thumb {
+  background: #c7b9e8;
+  border-radius: 8px;
+}
+
+.sidebar-right::-webkit-scrollbar-thumb:hover {
+  background: #6b4fc7;
 }
 
 .sidebar-title {
@@ -715,8 +737,6 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: 500px;
-  overflow-y: auto;
 }
 
 .no-friends {

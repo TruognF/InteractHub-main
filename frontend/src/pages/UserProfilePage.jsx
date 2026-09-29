@@ -341,6 +341,26 @@ export default function UserProfilePage() {
     navigate(`/home?hashtag=${encodeURIComponent(slug)}`);
   };
 
+  const handlePostCardClick = (e, postId) => {
+    if (!postId) return;
+    if (e.target.closest(
+      'button, ' +
+      '.post-user-info, ' +
+      '.post-user-info-profile, ' +
+      '.post-menu-container, ' +
+      '.post-actions, ' +
+      '.post-actions-profile, ' +
+      '.shared-post-container, ' +
+      '.comment-section, ' +
+      '.shared-post-comments, ' +
+      '.hashtag-link, ' +
+      'input, textarea'
+    )) {
+      return;
+    }
+    navigate(`/post/${postId}`);
+  };
+
   if (loading) {
     return (
       <div className="profile-wrapper">
@@ -437,7 +457,11 @@ export default function UserProfilePage() {
               <p className="no-posts">Chưa có bài viết nào</p>
             ) : (
               posts.map((post) => (
-                <div key={post.Id} className="profile-post-card">
+                <div 
+                  key={post.Id} 
+                  className="profile-post-card"
+                  onClick={(e) => handlePostCardClick(e, post.Id)}
+                >
                   <div className="post-header-profile">
                     <div className="post-user-info-profile">
                       <div className="post-avatar-profile">
