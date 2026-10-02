@@ -88,6 +88,10 @@
 
 .post-content {
   margin-bottom: 12px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .post-content p {
@@ -95,6 +99,9 @@
   font-size: 15px;
   line-height: 1.4;
   color: #050505;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
 }
 
 .post-image {

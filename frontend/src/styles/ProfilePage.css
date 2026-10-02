@@ -253,6 +253,10 @@
 
 .post-content-profile {
   margin-bottom: 15px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .post-content-profile p {
@@ -260,6 +264,9 @@
   color: #333;
   font-size: 14px;
   line-height: 1.5;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
 }
 
 .post-hashtags {

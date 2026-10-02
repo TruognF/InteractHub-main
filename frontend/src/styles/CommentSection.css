@@ -263,6 +263,9 @@
   color: #3f345e;
   font-size: 14px;
   line-height: 1.6;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
 }
 
 .comment-meta-row {

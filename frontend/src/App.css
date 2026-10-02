@@ -12,6 +12,18 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Global text wrap safeguard */
+.post-content,
+.post-content p,
+.post-content-profile,
+.post-content-profile p,
+.comment-text,
+.post-hashtag,
+.shared-post-container {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .auth-container {
   min-height: 100vh;
   background: linear-gradient(135deg, #E6D5E8 0%, #F0E6F6 100%);
