@@ -189,4 +189,22 @@ public class PostsControllerTests
         var badRequestResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, badRequestResult.StatusCode);
     }
+
+    [Fact]
+    public async Task Create_ShouldReturnBadRequest_WhenContentExceeds5000Characters()
+    {
+        // Arrange
+        var longContent = new string('A', 5001);
+        var createDto = new CreatePostDto { Content = longContent, ImageUrl = null };
+        var postServiceMock = new Mock<IPostService>();
+        var controller = CreateController(postServiceMock);
+        ControllerTestHelper.SetUser(controller, "u1");
+
+        // Act
+        var result = await controller.Create(createDto);
+
+        // Assert
+        var badRequestResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(400, badRequestResult.StatusCode);
+    }
 }

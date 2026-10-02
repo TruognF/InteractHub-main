@@ -109,6 +109,9 @@ public class PostsController : ControllerBase
         if (string.IsNullOrWhiteSpace(createPostDto.Content))
             return this.BadRequestResponse(new List<ApiError> { new ApiError("Content is required and cannot be empty", code: "EMPTY_CONTENT") });
 
+        if (createPostDto.Content.Length > 5000)
+            return this.BadRequestResponse(new List<ApiError> { new ApiError("Content không được vượt quá 5000 ký tự", code: "CONTENT_TOO_LONG") });
+
         var post = new Post
         {
             Content = createPostDto.Content,
@@ -155,6 +158,9 @@ public class PostsController : ControllerBase
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userId))
             return this.UnauthorizedResponse("User not authenticated");
+
+        if (!string.IsNullOrEmpty(shareDto?.Content) && shareDto.Content.Length > 5000)
+            return this.BadRequestResponse(new List<ApiError> { new ApiError("Content không được vượt quá 5000 ký tự", code: "CONTENT_TOO_LONG") });
 
         // Check if original post exists
         var originalPost = await _postService.GetByIdAsync(postId);

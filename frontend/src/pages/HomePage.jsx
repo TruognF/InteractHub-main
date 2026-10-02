@@ -667,6 +667,11 @@ export default function HomePage() {
       return;
     }
 
+    if (newPostContent.length > 5000) {
+      setError('Nội dung bài viết không được vượt quá 5000 ký tự');
+      return;
+    }
+
     setPosting(true);
     try {
       let imageBase64 = null;
@@ -1406,7 +1411,11 @@ export default function HomePage() {
                 placeholder="Chia sẻ suy nghĩ của bạn..."
                 className="post-textarea"
                 rows="4"
+                maxLength={5000}
               />
+              <div className="char-counter" style={{ textAlign: 'right', fontSize: '0.8rem', color: newPostContent.length >= 5000 ? '#ef4444' : '#6b7280', marginTop: '2px', marginBottom: '8px' }}>
+                {newPostContent.length}/5000
+              </div>
               
               <div className="post-form-bottom">
                 <div className="file-input-wrapper">
