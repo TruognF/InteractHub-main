@@ -176,6 +176,11 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
 
   const handleEditComment = (commentId, currentText) => {
     console.log('handleEditComment - id:', commentId, 'text:', currentText);
+    const targetComment = commentList.find(c => c.id === commentId);
+    if (targetComment && targetComment.userId !== currentUser?.Id) {
+      console.warn('Unauthorized attempt to edit comment by non-owner');
+      return;
+    }
     setEditingCommentId(commentId);
     setEditingCommentText(currentText);
     setActiveMenuCommentId(null);
@@ -224,14 +229,18 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
                 const displayName = userData?.FullName || userData?.fullName || comment.userName;
                 const displayProfilePic = userData?.ProfilePictureUrl || userData?.profilePictureUrl || comment.userProfilePictureUrl;
                 
-                // Check if current user can delete this comment
-                const canDeleteComment = currentUser?.Id === comment.userId || currentUser?.Id === postUserId;
+                // Check permissions: only comment owner can edit; both comment owner and post owner can delete
+                const isCommentOwner = currentUser?.Id === comment.userId;
+                const isPostOwner = currentUser?.Id === postUserId;
+                const canEditComment = isCommentOwner;
+                const canDeleteComment = isCommentOwner || isPostOwner;
                 
                 console.log('Rendering comment:', {
                   id: comment.id,
                   userId: comment.userId,
                   content: comment.content,
                   createdAt: comment.createdAt,
+                  canEdit: canEditComment,
                   canDelete: canDeleteComment,
                   currentUserId: currentUser?.Id,
                   postUserId,
@@ -289,18 +298,20 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
                           </button>
                           {activeMenuCommentId === comment.id && (
                             <div className="comment-menu-dropdown">
-                              <button 
-                                type="button"
-                                className="menu-item"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  console.log('Edit button clicked');
-                                  handleEditComment(comment.id, comment.content);
-                                }}
-                              >
-                                <i className="fa-solid fa-pen"></i> Chỉnh sửa
-                              </button>
+                              {canEditComment && (
+                                <button 
+                                  type="button"
+                                  className="menu-item"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    console.log('Edit button clicked');
+                                    handleEditComment(comment.id, comment.content);
+                                  }}
+                                >
+                                  <i className="fa-solid fa-pen"></i> Chỉnh sửa
+                                </button>
+                              )}
                               <button 
                                 type="button"
                                 className="menu-item delete"

@@ -253,7 +253,14 @@ public class CommentsController : ControllerBase
             return this.NotFoundResponse("Comment not found");
 
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (comment.UserId != userId)
+        if (string.IsNullOrEmpty(userId))
+            return this.UnauthorizedResponse("User not authenticated");
+
+        var postInfo = await _postService.GetLiteAsync(comment.PostId);
+        var isCommentOwner = comment.UserId == userId;
+        var isPostOwner = postInfo != null && postInfo.UserId == userId;
+
+        if (!isCommentOwner && !isPostOwner)
             return this.ForbiddenResponse("You cannot delete this comment");
 
         var result = await _commentService.DeleteAsync(id);
@@ -273,7 +280,6 @@ public class CommentsController : ControllerBase
 
         try
         {
-            var postInfo = await _postService.GetLiteAsync(comment.PostId);
             var commentsCount = await _commentService.GetCountByPostIdAsync(comment.PostId);
             await _postHubContext.Clients.Group("feed")
                 .SendAsync("CommentDeleted", new
