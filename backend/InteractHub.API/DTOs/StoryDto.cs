@@ -1,9 +1,14 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace InteractHub.API.DTOs;
 
 public class CreateStoryDto
 {
     public string? ImageUrl {get; set;}
+
+    [MaxLength(500, ErrorMessage = "Nội dung tin không được vượt quá 500 ký tự")]
     public string? Content {get; set;}
+
     public DateTime ExpireAt {get; set;}
 }
 

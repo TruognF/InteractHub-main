@@ -7,3 +7,13 @@ frontend/node_modules/
 *.user
 *.suo
 appsettings.Development.json
+
+# Không cho thêm ảnh và nội dung trong folder 'ảnh chụp web'
+ảnh chụp web/
+**/ảnh chụp web/**
+
+# Không cho thêm ảnh và nội dung trong folder 'wwwroot' (chứa ảnh uploads backend)
+wwwroot/
+**/wwwroot/**
+**/wwwroot/uploads/**
+**/uploads/**

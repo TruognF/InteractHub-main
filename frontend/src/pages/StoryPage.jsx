@@ -211,6 +211,11 @@ export default function StoryPage() {
       return;
     }
 
+    if (newStoryContent.length > 500) {
+      setError('Nội dung tin không được vượt quá 500 ký tự');
+      return;
+    }
+
     setCreatingStory(true);
     try {
       let imageBase64 = null;
@@ -409,7 +414,11 @@ export default function StoryPage() {
                     placeholder="Chia sẻ tin của bạn..."
                     className="story-textarea"
                     rows="4"
+                    maxLength={500}
                   />
+                  <div className="char-counter" style={{ textAlign: 'right', fontSize: '0.8rem', color: newStoryContent.length >= 500 ? '#ef4444' : '#6b7280', marginTop: '-10px', marginBottom: '4px' }}>
+                    {newStoryContent.length}/500
+                  </div>
 
                   <div className="story-form-bottom">
                     <div className="file-input-wrapper">

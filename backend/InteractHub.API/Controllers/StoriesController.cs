@@ -160,6 +160,14 @@ public class StoriesController : ControllerBase
         if (string.IsNullOrEmpty(userId))
             return this.UnauthorizedResponse("User not authenticated");
 
+        if (!string.IsNullOrEmpty(createStoryDto.Content) && createStoryDto.Content.Length > 500)
+        {
+            return this.BadRequestResponse(new List<ApiError>
+            {
+                new ApiError("Nội dung tin không được vượt quá 500 ký tự", code: "STORY_CONTENT_TOO_LONG")
+            });
+        }
+
         var story = new Story
         {
             ImageUrl = await _imageStorage.SaveDataUriAsync(createStoryDto.ImageUrl, "stories"),
