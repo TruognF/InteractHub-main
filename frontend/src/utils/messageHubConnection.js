@@ -5,6 +5,8 @@ class MessageHubConnection {
     this.connection = null;
     this.isConnected = false;
     this.messageListeners = [];
+    this.messageUpdatedListeners = [];
+    this.messageDeletedListeners = [];
     this.presenceListeners = [];
     this.currentConversationUserId = null;
   }
@@ -54,6 +56,18 @@ class MessageHubConnection {
       this.connection.on('ReceiveMessage', (message) => {
         console.log('[MessageHub] ✉️ Incoming message received:', message);
         this.messageListeners.forEach(listener => listener(message));
+      });
+
+      // Handle updated messages
+      this.connection.on('MessageUpdated', (message) => {
+        console.log('[MessageHub] ✏️ Message updated received:', message);
+        this.messageUpdatedListeners.forEach(listener => listener(message));
+      });
+
+      // Handle deleted messages
+      this.connection.on('MessageDeleted', (message) => {
+        console.log('[MessageHub] 🗑️ Message deleted received:', message);
+        this.messageDeletedListeners.forEach(listener => listener(message));
       });
 
       // Handle user online status
@@ -234,6 +248,36 @@ class MessageHubConnection {
     return () => {
       console.log('[MessageHub] 📌 Unregistering message listener');
       this.messageListeners = this.messageListeners.filter(l => l !== listener);
+    };
+  }
+
+  /**
+   * Subscribe to updated messages
+   * @param {Function} listener - Callback function to handle updated messages
+   * @returns {Function} - Function to unsubscribe
+   */
+  onMessageUpdated(listener) {
+    console.log('[MessageHub] 📌 Registering message updated listener');
+    this.messageUpdatedListeners.push(listener);
+    
+    return () => {
+      console.log('[MessageHub] 📌 Unregistering message updated listener');
+      this.messageUpdatedListeners = this.messageUpdatedListeners.filter(l => l !== listener);
+    };
+  }
+
+  /**
+   * Subscribe to deleted messages
+   * @param {Function} listener - Callback function to handle deleted messages
+   * @returns {Function} - Function to unsubscribe
+   */
+  onMessageDeleted(listener) {
+    console.log('[MessageHub] 📌 Registering message deleted listener');
+    this.messageDeletedListeners.push(listener);
+    
+    return () => {
+      console.log('[MessageHub] 📌 Unregistering message deleted listener');
+      this.messageDeletedListeners = this.messageDeletedListeners.filter(l => l !== listener);
     };
   }
 

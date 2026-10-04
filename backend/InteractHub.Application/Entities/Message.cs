@@ -16,4 +16,7 @@ public class Message
     public Group? Group { get; set; }
 
     public bool IsRead { get; set; } = false;
+    public bool IsEdited { get; set; } = false;
+    public bool IsDeleted { get; set; } = false;
+    public DateTime? UpdatedAt { get; set; }
 }

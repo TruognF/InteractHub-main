@@ -58,13 +58,15 @@ public class MessagesController : ControllerBase
         var messageDtos = messages.Select(m => new MessageResponseDto
         {
             Id = m.Id,
-            Content = m.Content,
+            Content = m.IsDeleted ? "tin nhắn đã được thu hồi" : m.Content,
             CreatedAt = m.CreatedAt,
             SenderId = m.SenderId,
             SenderName = m.Sender?.UserName ?? "Unknown",
             ReceiverId = m.ReceiverId,
             ReceiverName = m.Receiver?.UserName ?? "Unknown",
-            IsRead = m.IsRead
+            IsRead = m.IsRead,
+            IsEdited = m.IsEdited,
+            IsDeleted = m.IsDeleted
         }).ToList();
 
         return this.SuccessResponse(new
@@ -110,13 +112,15 @@ public class MessagesController : ControllerBase
         var messageDtos = messages.Select(m => new MessageResponseDto
         {
             Id = m.Id,
-            Content = m.Content,
+            Content = m.IsDeleted ? "tin nhắn đã được thu hồi" : m.Content,
             CreatedAt = m.CreatedAt,
             SenderId = m.SenderId,
             SenderName = m.Sender?.UserName ?? "Unknown",
             GroupId = m.GroupId,
             GroupName = m.Group?.Name,
-            IsRead = m.IsRead
+            IsRead = m.IsRead,
+            IsEdited = m.IsEdited,
+            IsDeleted = m.IsDeleted
         }).ToList();
 
         return this.SuccessResponse(new
@@ -143,6 +147,9 @@ public class MessagesController : ControllerBase
 
         if (string.IsNullOrWhiteSpace(dto.Content))
             return BadRequest("Message content is required");
+
+        if (dto.Content.Length > 2000)
+            return BadRequest("Nội dung tin nhắn không được vượt quá 2000 ký tự");
 
         Message message;
         if (dto.GroupId.HasValue)
@@ -183,7 +190,9 @@ public class MessagesController : ControllerBase
             ReceiverName = message.Receiver?.UserName ?? "Unknown",
             GroupId = message.GroupId,
             GroupName = message.Group?.Name,
-            IsRead = message.IsRead
+            IsRead = message.IsRead,
+            IsEdited = message.IsEdited,
+            IsDeleted = message.IsDeleted
         };
 
         // 🔄 Send message to both users via SignalR for real-time update
@@ -241,16 +250,142 @@ public class MessagesController : ControllerBase
         var messageDtos = messages.Select(m => new MessageResponseDto
         {
             Id = m.Id,
-            Content = m.Content,
+            Content = m.IsDeleted ? "tin nhắn đã được thu hồi" : m.Content,
             CreatedAt = m.CreatedAt,
             SenderId = m.SenderId,
             SenderName = m.Sender?.UserName ?? "Unknown",
             ReceiverId = m.ReceiverId,
             ReceiverName = m.Receiver?.UserName ?? "Unknown",
-            IsRead = m.IsRead
+            IsRead = m.IsRead,
+            IsEdited = m.IsEdited,
+            IsDeleted = m.IsDeleted
         }).ToList();
 
         return this.SuccessResponse(messageDtos);
+    }
+
+    [HttpPut("{messageId}")]
+    [ProducesResponseType(typeof(ApiResponse<MessageResponseDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> UpdateMessage(int messageId, [FromBody] UpdateMessageDto dto)
+    {
+        var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(currentUserId))
+            return Unauthorized();
+
+        if (string.IsNullOrWhiteSpace(dto.Content))
+            return BadRequest("Nội dung tin nhắn không được để trống");
+
+        if (dto.Content.Length > 2000)
+            return BadRequest("Nội dung tin nhắn không được vượt quá 2000 ký tự");
+
+        var message = await _messageService.GetByIdAsync(messageId);
+        if (message == null)
+            return NotFound("Tin nhắn không tồn tại");
+
+        if (message.SenderId != currentUserId)
+            return StatusCode(StatusCodes.Status403Forbidden, "Bạn không có quyền sửa tin nhắn này");
+
+        if (message.IsDeleted)
+            return BadRequest("Không thể sửa tin nhắn đã bị thu hồi");
+
+        var updatedMessage = await _messageService.UpdateMessageAsync(messageId, currentUserId, dto.Content.Trim());
+        if (updatedMessage == null)
+            return BadRequest("Không thể cập nhật tin nhắn");
+
+        var messageDto = new MessageResponseDto
+        {
+            Id = updatedMessage.Id,
+            Content = updatedMessage.Content,
+            CreatedAt = updatedMessage.CreatedAt,
+            SenderId = updatedMessage.SenderId,
+            SenderName = updatedMessage.Sender?.UserName ?? "Unknown",
+            ReceiverId = updatedMessage.ReceiverId,
+            ReceiverName = updatedMessage.Receiver?.UserName ?? "Unknown",
+            GroupId = updatedMessage.GroupId,
+            GroupName = updatedMessage.Group?.Name,
+            IsRead = updatedMessage.IsRead,
+            IsEdited = updatedMessage.IsEdited,
+            IsDeleted = updatedMessage.IsDeleted
+        };
+
+        // 🔄 Broadcast MessageUpdated via SignalR for real-time update
+        if (updatedMessage.GroupId.HasValue)
+        {
+            var groupMembers = updatedMessage.Group?.Memberships.Select(m => m.UserId).ToList() ?? new List<string>();
+            foreach (var memberId in groupMembers)
+            {
+                await _messageHubContext.Clients.Group($"user_{memberId}")
+                    .SendAsync("MessageUpdated", messageDto);
+            }
+        }
+        else if (!string.IsNullOrEmpty(updatedMessage.ReceiverId))
+        {
+            var conversationGroup = GetConversationGroupName(currentUserId, updatedMessage.ReceiverId);
+            await _messageHubContext.Clients.Group(conversationGroup).SendAsync("MessageUpdated", messageDto);
+            await _messageHubContext.Clients.Group($"user_{updatedMessage.ReceiverId}").SendAsync("MessageUpdated", messageDto);
+            await _messageHubContext.Clients.Group($"user_{currentUserId}").SendAsync("MessageUpdated", messageDto);
+        }
+
+        return this.SuccessResponse(messageDto, "Cập nhật tin nhắn thành công");
+    }
+
+    [HttpDelete("{messageId}")]
+    [ProducesResponseType(typeof(ApiResponse<MessageResponseDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> RecallMessage(int messageId)
+    {
+        var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(currentUserId))
+            return Unauthorized();
+
+        var message = await _messageService.GetByIdAsync(messageId);
+        if (message == null)
+            return NotFound("Tin nhắn không tồn tại");
+
+        if (message.SenderId != currentUserId)
+            return StatusCode(StatusCodes.Status403Forbidden, "Bạn không có quyền thu hồi tin nhắn này");
+
+        if (message.IsDeleted)
+            return BadRequest("Tin nhắn đã được thu hồi trước đó");
+
+        var recalledMessage = await _messageService.RecallMessageAsync(messageId, currentUserId);
+        if (recalledMessage == null)
+            return BadRequest("Không thể thu hồi tin nhắn");
+
+        var messageDto = new MessageResponseDto
+        {
+            Id = recalledMessage.Id,
+            Content = "tin nhắn đã được thu hồi",
+            CreatedAt = recalledMessage.CreatedAt,
+            SenderId = recalledMessage.SenderId,
+            SenderName = recalledMessage.Sender?.UserName ?? "Unknown",
+            ReceiverId = recalledMessage.ReceiverId,
+            ReceiverName = recalledMessage.Receiver?.UserName ?? "Unknown",
+            GroupId = recalledMessage.GroupId,
+            GroupName = recalledMessage.Group?.Name,
+            IsRead = recalledMessage.IsRead,
+            IsEdited = recalledMessage.IsEdited,
+            IsDeleted = true
+        };
+
+        // 🔄 Broadcast MessageDeleted via SignalR for real-time update
+        if (recalledMessage.GroupId.HasValue)
+        {
+            var groupMembers = recalledMessage.Group?.Memberships.Select(m => m.UserId).ToList() ?? new List<string>();
+            foreach (var memberId in groupMembers)
+            {
+                await _messageHubContext.Clients.Group($"user_{memberId}")
+                    .SendAsync("MessageDeleted", messageDto);
+            }
+        }
+        else if (!string.IsNullOrEmpty(recalledMessage.ReceiverId))
+        {
+            var conversationGroup = GetConversationGroupName(currentUserId, recalledMessage.ReceiverId);
+            await _messageHubContext.Clients.Group(conversationGroup).SendAsync("MessageDeleted", messageDto);
+            await _messageHubContext.Clients.Group($"user_{recalledMessage.ReceiverId}").SendAsync("MessageDeleted", messageDto);
+            await _messageHubContext.Clients.Group($"user_{currentUserId}").SendAsync("MessageDeleted", messageDto);
+        }
+
+        return this.SuccessResponse(messageDto, "Thu hồi tin nhắn thành công");
     }
 
     /// <summary>

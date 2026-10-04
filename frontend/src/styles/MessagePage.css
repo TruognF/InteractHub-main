@@ -447,7 +447,7 @@
 }
 
 .message-item.sent .message-bubble {
-  margin-left: auto;
+  margin-left: 0;
 }
 
 .message-avatar-small {
@@ -1070,3 +1070,227 @@
     gap: 8px;
   }
 }
+
+/* ===== MESSAGE EDIT & RECALL STYLES ===== */
+
+/* Recalled message */
+.recalled-bubble {
+  background: #f1f1f1 !important;
+  color: #888 !important;
+  border: 1px dashed #d0d0d0;
+  box-shadow: none !important;
+}
+
+.recalled-text {
+  font-style: italic;
+  color: #777;
+  margin: 0 !important;
+}
+
+/* Notice for edited message: "tin nhắn này đã được chỉnh sữa" */
+.message-edited-notice {
+  font-size: 11px;
+  margin-top: 4px;
+  font-style: italic;
+  opacity: 0.85;
+}
+
+.sent-bubble .message-edited-notice {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.received-bubble .message-edited-notice {
+  color: #666;
+}
+
+/* Action dropdown menu (...) - click to show Edit / Delete options */
+.message-item {
+  position: relative;
+}
+
+.message-actions-wrapper {
+  position: relative;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.msg-more-btn {
+  background: white;
+  border: 1px solid #e0d5f0;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 13px;
+  color: #777;
+  opacity: 0;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.message-item:hover .msg-more-btn,
+.message-actions-wrapper:focus-within .msg-more-btn,
+.message-actions-wrapper.active .msg-more-btn {
+  opacity: 1;
+}
+
+.message-actions-wrapper.active .msg-more-btn {
+  background: #f5f0ff;
+  color: #6b4fc7;
+  border-color: #6b4fc7;
+}
+
+@media (hover: none) {
+  .msg-more-btn {
+    opacity: 0.6;
+  }
+}
+
+.msg-more-btn:hover {
+  background: #f5f0ff;
+  color: #6b4fc7;
+  border-color: #6b4fc7;
+  transform: scale(1.08);
+}
+
+.msg-menu-dropdown {
+  position: absolute;
+  right: calc(100% + 6px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  border: 1px solid #e9ddff;
+  padding: 6px;
+  min-width: 145px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  animation: fadeInMenu 0.15s ease-out;
+}
+
+@keyframes fadeInMenu {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+}
+
+.msg-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #333;
+  text-align: left;
+  width: 100%;
+  transition: background 0.15s ease, color 0.15s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.msg-menu-item i {
+  font-size: 12px;
+  width: 14px;
+}
+
+.msg-menu-item.edit {
+  color: #4b3096;
+}
+
+.msg-menu-item.edit:hover {
+  background: #f3edff;
+  color: #6b4fc7;
+}
+
+.msg-menu-item.delete {
+  color: #dc2626;
+}
+
+.msg-menu-item.delete:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* Inline Edit Mode */
+.message-edit-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 220px;
+}
+
+.message-edit-input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 13px;
+  font-family: inherit;
+  color: #333;
+  background: #fff;
+  outline: none;
+}
+
+.message-edit-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.msg-btn-save {
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.msg-btn-save:hover {
+  background: #43a047;
+}
+
+.msg-btn-cancel {
+  background: rgba(0, 0, 0, 0.1);
+  color: #555;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.sent-bubble .msg-btn-cancel {
+  background: rgba(255, 255, 255, 0.3);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.message-char-count {
+  font-size: 11px;
+  color: #888;
+  align-self: center;
+  margin-right: 4px;
+}
+

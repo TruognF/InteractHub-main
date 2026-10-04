@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getConversationsSorted, getConversationMessages, sendMessage } from '../api';
+import { getConversationsSorted, getConversationMessages, sendMessage, updateMessage, recallMessage } from '../api';
 import { messageHubConnection } from '../utils/messageHubConnection';
 import Header from '../components/Header';
 import '../styles/MessagePage.css';
@@ -25,6 +25,9 @@ export default function MessagePage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editingText, setEditingText] = useState('');
+  const [activeMenuMessageId, setActiveMenuMessageId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -34,6 +37,8 @@ export default function MessagePage() {
   
   const navigate = useNavigate();
   const unsubscribeRef = useRef(null);
+  const unsubscribeUpdatedRef = useRef(null);
+  const unsubscribeDeletedRef = useRef(null);
   const presenceUnsubscribeRef = useRef(null);
   const previousConversationRef = useRef(null);
   const messagesAreaRef = useRef(null);
@@ -244,7 +249,9 @@ export default function MessagePage() {
       const normalized = (messageData || []).map((message) => ({
         id: message.Id || message.id,
         senderId: message.SenderId || message.senderId,
-        text: message.Content || message.content,
+        text: (message.IsDeleted ?? message.isDeleted) ? 'tin nhắn đã được thu hồi' : (message.Content || message.content),
+        isEdited: message.IsEdited ?? message.isEdited ?? false,
+        isDeleted: message.IsDeleted ?? message.isDeleted ?? false,
         timestamp: new Date(message.CreatedAt || message.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
         createdAt: new Date(message.CreatedAt || message.createdAt) // Store for sorting
       }));
@@ -351,6 +358,11 @@ export default function MessagePage() {
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
 
+    if (newMessage.length > 2000) {
+      alert('Nội dung tin nhắn không được vượt quá 2000 ký tự');
+      return;
+    }
+
     try {
       const sentMessage = await sendMessage(selectedConversation.id, newMessage.trim());
       
@@ -364,6 +376,8 @@ export default function MessagePage() {
         id: sentMessage?.Id || sentMessage?.id || messages.length + 1,
         senderId: sentMessage?.SenderId || sentMessage?.senderId || currentUser?.Id || currentUser?.id,
         text: sentMessage?.Content || sentMessage?.content || newMessage.trim(),
+        isEdited: false,
+        isDeleted: false,
         timestamp: new Date(sentMessage?.CreatedAt || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
         createdAt: new Date(sentMessage?.CreatedAt || Date.now())
       };
@@ -405,6 +419,65 @@ export default function MessagePage() {
       scrollToBottom();
     } catch (err) {
       console.error('Error sending message:', err);
+      alert(err.message || 'Lỗi gửi tin nhắn');
+    }
+  };
+
+  const handleStartEdit = (message) => {
+    setEditingMessageId(message.id);
+    setEditingText(message.text);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessageId(null);
+    setEditingText('');
+  };
+
+  const handleSaveEdit = async (messageId) => {
+    if (!editingText.trim()) return;
+    if (editingText.length > 2000) {
+      alert('Nội dung tin nhắn không được vượt quá 2000 ký tự');
+      return;
+    }
+
+    try {
+      await updateMessage(messageId, editingText.trim());
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId
+            ? { ...m, text: editingText.trim(), isEdited: true }
+            : m
+        )
+      );
+      setEditingMessageId(null);
+      setEditingText('');
+    } catch (err) {
+      console.error('Lỗi khi sửa tin nhắn:', err);
+      alert(err.message || 'Không thể chỉnh sửa tin nhắn');
+    }
+  };
+
+  const handleRecallMessage = async (messageId) => {
+    if (!window.confirm('Bạn có chắc chắn muốn thu hồi tin nhắn này đối với cả hai người?')) {
+      return;
+    }
+
+    try {
+      await recallMessage(messageId);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId
+            ? { ...m, text: 'tin nhắn đã được thu hồi', isDeleted: true }
+            : m
+        )
+      );
+      if (editingMessageId === messageId) {
+        setEditingMessageId(null);
+        setEditingText('');
+      }
+    } catch (err) {
+      console.error('Lỗi khi thu hồi tin nhắn:', err);
+      alert(err.message || 'Không thể thu hồi tin nhắn');
     }
   };
 
@@ -475,13 +548,60 @@ export default function MessagePage() {
       }
     });
 
+    // 🔄 Subscribe to updated messages
+    const unsubscribeUpdated = messageHubConnection.onMessageUpdated((updatedMessage) => {
+      console.log('[MessagePage] ✏️ Incoming MessageUpdated from SignalR:', updatedMessage);
+      const updatedId = updatedMessage.id ?? updatedMessage.Id;
+      const content = (updatedMessage.isDeleted ?? updatedMessage.IsDeleted)
+        ? 'tin nhắn đã được thu hồi'
+        : (updatedMessage.content ?? updatedMessage.Content);
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          String(m.id) === String(updatedId)
+            ? {
+                ...m,
+                text: content,
+                isEdited: updatedMessage.isEdited ?? updatedMessage.IsEdited ?? true,
+                isDeleted: updatedMessage.isDeleted ?? updatedMessage.IsDeleted ?? false
+              }
+            : m
+        )
+      );
+    });
+
+    // 🔄 Subscribe to deleted/recalled messages
+    const unsubscribeDeleted = messageHubConnection.onMessageDeleted((deletedMessage) => {
+      console.log('[MessagePage] 🗑️ Incoming MessageDeleted from SignalR:', deletedMessage);
+      const deletedId = deletedMessage.id ?? deletedMessage.Id ?? deletedMessage.messageId;
+      setMessages((prev) =>
+        prev.map((m) =>
+          String(m.id) === String(deletedId)
+            ? {
+                ...m,
+                text: 'tin nhắn đã được thu hồi',
+                isDeleted: true
+              }
+            : m
+        )
+      );
+    });
+
     unsubscribeRef.current = unsubscribe;
-    console.log('[MessagePage] ✅ Message listener registered');
+    unsubscribeUpdatedRef.current = unsubscribeUpdated;
+    unsubscribeDeletedRef.current = unsubscribeDeleted;
+    console.log('[MessagePage] ✅ Message listeners registered');
 
     return () => {
       if (unsubscribe) {
         console.log('[MessagePage] 🧹 Unregistering message listener');
         unsubscribe();
+      }
+      if (unsubscribeUpdated) {
+        unsubscribeUpdated();
+      }
+      if (unsubscribeDeleted) {
+        unsubscribeDeleted();
       }
     };
   }, [selectedConversation, currentUser, scrollToBottom]);
@@ -551,6 +671,17 @@ export default function MessagePage() {
     }, 60000); // Update every 60 seconds
 
     return () => clearInterval(interval);
+  }, []);
+
+  // 🖱️ Close message menu dropdown when clicking outside
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (!e.target.closest('.message-actions-wrapper')) {
+        setActiveMenuMessageId(null);
+      }
+    };
+    document.addEventListener('click', handleOutsideClick);
+    return () => document.removeEventListener('click', handleOutsideClick);
   }, []);
 
   // 📜 Debounced scroll handler for lazy loading
@@ -701,10 +832,13 @@ export default function MessagePage() {
                 )}
                 {messages.map((message) => {
                   const isSentByCurrentUser = String(message.senderId) === String(currentUser?.Id ?? currentUser?.id);
+                  const isRecalled = message.isDeleted;
+                  const isEditingThis = editingMessageId === message.id;
+
                   return (
                     <div
                       key={message.id}
-                      className={`message-item ${isSentByCurrentUser ? 'sent' : 'received'}`}>
+                      className={`message-item ${isSentByCurrentUser ? 'sent' : 'received'} ${isRecalled ? 'recalled' : ''}`}>
                       {!isSentByCurrentUser && (
                         <div className="message-avatar-small">
                           {selectedConversation?.avatarUrl ? (
@@ -716,9 +850,84 @@ export default function MessagePage() {
                           )}
                         </div>
                       )}
-                      <div className={`message-bubble ${isSentByCurrentUser ? 'sent-bubble' : 'received-bubble'}`}>
-                        <p>{message.text}</p>
-                        <span className="message-time">{message.timestamp}</span>
+
+                      {/* Action dropdown menu (...) - click to show Edit / Delete options */}
+                      {isSentByCurrentUser && !isRecalled && !isEditingThis && (
+                        <div className={`message-actions-wrapper ${activeMenuMessageId === message.id ? 'active' : ''}`}>
+                          <button
+                            type="button"
+                            className="msg-more-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMenuMessageId(activeMenuMessageId === message.id ? null : message.id);
+                            }}
+                            title="Tùy chọn tin nhắn"
+                          >
+                            <i className="fa-solid fa-ellipsis"></i>
+                          </button>
+
+                          {activeMenuMessageId === message.id && (
+                            <div className="msg-menu-dropdown">
+                              <button
+                                type="button"
+                                className="msg-menu-item edit"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveMenuMessageId(null);
+                                  handleStartEdit(message);
+                                }}
+                              >
+                                <i className="fa-solid fa-pen"></i>
+                                <span>Sửa tin nhắn</span>
+                              </button>
+                              <button
+                                type="button"
+                                className="msg-menu-item delete"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveMenuMessageId(null);
+                                  handleRecallMessage(message.id);
+                                }}
+                              >
+                                <i className="fa-solid fa-trash-can"></i>
+                                <span>Xóa tin nhắn</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div className={`message-bubble ${isSentByCurrentUser ? 'sent-bubble' : 'received-bubble'} ${isRecalled ? 'recalled-bubble' : ''}`}>
+                        {isEditingThis ? (
+                          <div className="message-edit-inline">
+                            <input
+                              type="text"
+                              className="message-edit-input"
+                              value={editingText}
+                              maxLength={2000}
+                              onChange={(e) => setEditingText(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveEdit(message.id);
+                                if (e.key === 'Escape') handleCancelEdit();
+                              }}
+                              autoFocus
+                            />
+                            <div className="message-edit-buttons">
+                              <button className="msg-btn-save" onClick={() => handleSaveEdit(message.id)}>Lưu</button>
+                              <button className="msg-btn-cancel" onClick={handleCancelEdit}>Hủy</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <p className={isRecalled ? 'recalled-text' : ''}>{message.text}</p>
+                            <span className="message-time">{message.timestamp}</span>
+                            {message.isEdited && !isRecalled && (
+                              <div className="message-edited-notice">
+                                tin nhắn này đã được chỉnh sữa
+                              </div>
+                            )}
+                          </>
+                        )}
                       </div>
                     </div>
                   );
@@ -731,10 +940,14 @@ export default function MessagePage() {
                   type="text"
                   placeholder="Nhập tin nhắn..."
                   value={newMessage}
+                  maxLength={2000}
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                   className="message-input"
                 />
+                {newMessage.length > 1800 && (
+                  <span className="message-char-count">{newMessage.length}/2000</span>
+                )}
                 <button onClick={handleSendMessage} className="message-send-btn">
                   ➤
                 </button>

@@ -30,4 +30,16 @@ public static class SignalRMockFactory
         
         return mockHub;
     }
+
+    public static Mock<IHubContext<MessageHub>> CreateMessageHubMock()
+    {
+        var mockHub = new Mock<IHubContext<MessageHub>>();
+        var mockClients = new Mock<IHubClients>();
+        mockHub.Setup(h => h.Clients).Returns(mockClients.Object);
+        var mockClientProxy = new Mock<IClientProxy>(MockBehavior.Loose);
+        mockClients.Setup(c => c.Group(It.IsAny<string>())).Returns(mockClientProxy.Object);
+        mockClients.Setup(c => c.All).Returns(mockClientProxy.Object);
+        mockClients.Setup(c => c.User(It.IsAny<string>())).Returns(mockClientProxy.Object);
+        return mockHub;
+    }
 }

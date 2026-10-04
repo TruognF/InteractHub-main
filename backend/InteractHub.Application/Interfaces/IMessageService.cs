@@ -24,4 +24,8 @@ public interface IMessageService
     /// Key = friend user id.
     /// </summary>
     Task<Dictionary<string, Message>> GetLatestMessagesForFriendsAsync(string userId, List<string> friendIds);
+
+    Task<Message?> GetByIdAsync(int messageId);
+    Task<Message?> UpdateMessageAsync(int messageId, string userId, string newContent);
+    Task<Message?> RecallMessageAsync(int messageId, string userId);
 }

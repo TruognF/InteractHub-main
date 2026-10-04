@@ -586,6 +586,27 @@ export async function sendMessage(receiverId, content, groupId = null) {
   return data?.Data || null;
 }
 
+export async function updateMessage(messageId, content) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/messages/${messageId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ content })
+  });
+  const data = await handleResponse(response);
+  return data?.Data || null;
+}
+
+export async function recallMessage(messageId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/messages/${messageId}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const data = await handleResponse(response);
+  return data?.Data || null;
+}
+
 export async function removeFriend(friendId) {
   const token = localStorage.getItem('token');
   const response = await fetch(`${API_BASE}/friendships/remove/${friendId}`, {

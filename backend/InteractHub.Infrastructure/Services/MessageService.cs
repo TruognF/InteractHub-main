@@ -152,4 +152,50 @@ public class MessageService : IMessageService
             m => m.SenderId == userId ? m.ReceiverId! : m.SenderId!,
             m => m);
     }
+
+    public async Task<Message?> GetByIdAsync(int messageId)
+    {
+        return await _context.Messages
+            .Include(m => m.Sender)
+            .Include(m => m.Receiver)
+            .Include(m => m.Group)
+            .FirstOrDefaultAsync(m => m.Id == messageId);
+    }
+
+    public async Task<Message?> UpdateMessageAsync(int messageId, string userId, string newContent)
+    {
+        var message = await _context.Messages
+            .Include(m => m.Sender)
+            .Include(m => m.Receiver)
+            .Include(m => m.Group)
+            .FirstOrDefaultAsync(m => m.Id == messageId);
+
+        if (message == null || message.SenderId != userId || message.IsDeleted)
+            return null;
+
+        message.Content = newContent;
+        message.IsEdited = true;
+        message.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+        return message;
+    }
+
+    public async Task<Message?> RecallMessageAsync(int messageId, string userId)
+    {
+        var message = await _context.Messages
+            .Include(m => m.Sender)
+            .Include(m => m.Receiver)
+            .Include(m => m.Group)
+            .FirstOrDefaultAsync(m => m.Id == messageId);
+
+        if (message == null || message.SenderId != userId)
+            return null;
+
+        message.IsDeleted = true;
+        message.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+        return message;
+    }
 }
