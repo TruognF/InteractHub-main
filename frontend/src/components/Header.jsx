@@ -147,21 +147,26 @@ export default function Header({ onLogout, showControls = true, onSearch, search
                   {unreadMessageCount > 0 && (
                     <span className="message-badge" style={{
                       position: 'absolute',
-                      top: '-5px',
-                      right: '-5px',
+                      top: '-6px',
+                      right: '-8px',
                       backgroundColor: '#dc3545',
                       color: 'white',
-                      borderRadius: '50%',
-                      width: '12px',
-                      height: '12px',
+                      borderRadius: '10px',
+                      minWidth: '18px',
+                      height: '18px',
+                      padding: '0 4px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: '12px',
+                      fontSize: '11px',
                       fontWeight: 'bold',
-                      border: '2px solid white'
+                      lineHeight: 1,
+                      border: '2px solid white',
+                      boxSizing: 'border-box',
+                      zIndex: 2,
+                      pointerEvents: 'none'
                     }}>
-                      
+                      {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
                     </span>
                   )}
                 </span>

@@ -19,5 +19,6 @@ export function normalizeNotificationPayload(raw) {
 }
 
 export function isMessageNotificationType(type) {
-  return String(type || '').toLowerCase() === 'message';
+  const t = String(type || '').toLowerCase();
+  return t === 'message' || t === '7';
 }

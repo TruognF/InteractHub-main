@@ -157,7 +157,7 @@ export default function HomePage() {
       
       // Count unread messages separately
       const unreadMessages = (notificationData || [])
-        .filter((n) => isMessageNotificationType(n.Type) && !n.IsRead)
+        .filter((n) => isMessageNotificationType(n.Type) && !(n.IsRead ?? n.isRead))
         .length;
       setUnreadMessageCount(unreadMessages);
     } catch (err) {
@@ -466,6 +466,14 @@ export default function HomePage() {
       setUnreadMessageCount((prev) => prev + 1);
     };
 
+    const onMessagesRead = () => {
+      if (currentUser?.Id || currentUser?.id) {
+        loadNotifications(currentUser);
+      } else {
+        setUnreadMessageCount(0);
+      }
+    };
+
     const onUserProfileUpdated = (e) => {
       const updatedUser = e.detail;
       if (!updatedUser || !updatedUser.Id) return;
@@ -560,6 +568,7 @@ export default function HomePage() {
 
     window.addEventListener('signalr:notification', onRealtimeNotification);
     window.addEventListener('signalr:message-unread', onMessageUnread);
+    window.addEventListener('signalr:messages-read', onMessagesRead);
     window.addEventListener('signalr:user-profile-updated', onUserProfileUpdated);
     window.addEventListener('signalr:friend-request-received', onFriendRequestReceived);
     window.addEventListener('signalr:friend-request-accepted', onFriendRequestAccepted);
@@ -567,6 +576,7 @@ export default function HomePage() {
     return () => {
       window.removeEventListener('signalr:notification', onRealtimeNotification);
       window.removeEventListener('signalr:message-unread', onMessageUnread);
+      window.removeEventListener('signalr:messages-read', onMessagesRead);
       window.removeEventListener('signalr:user-profile-updated', onUserProfileUpdated);
       window.removeEventListener('signalr:friend-request-received', onFriendRequestReceived);
       window.removeEventListener('signalr:friend-request-accepted', onFriendRequestAccepted);

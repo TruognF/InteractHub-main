@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getConversationsSorted, getConversationMessages, sendMessage, updateMessage, recallMessage } from '../api';
+import { getConversationsSorted, getConversationMessages, sendMessage, updateMessage, recallMessage, getNotifications, markNotificationAsRead, markMessageAsRead } from '../api';
 import { messageHubConnection } from '../utils/messageHubConnection';
+import { isMessageNotificationType } from '../utils/notificationPayload';
 import Header from '../components/Header';
 import '../styles/MessagePage.css';
 
@@ -234,6 +235,52 @@ export default function MessagePage() {
     }
   }, []);
 
+  // 📨 Helper: Mark notifications & messages for this conversation as read
+  const markConversationAsRead = useCallback(async (conversationId, currentMessages = []) => {
+    try {
+      const userDataJson = localStorage.getItem('user');
+      const user = userDataJson ? JSON.parse(userDataJson) : null;
+      const uid = user?.Id ?? user?.id;
+      if (!uid) return;
+
+      // 1. Mark unread message notifications in DB
+      const allNotifications = await getNotifications(uid);
+      const unreadMsgNotifs = (allNotifications || []).filter(
+        (n) => isMessageNotificationType(n.Type) && 
+               !(n.IsRead ?? n.isRead) && 
+               (!conversationId || String(n.RelatedUserId ?? n.relatedUserId) === String(conversationId))
+      );
+
+      if (unreadMsgNotifs.length > 0) {
+        await Promise.all(
+          unreadMsgNotifs.map((n) => {
+            const nid = n.Id ?? n.id;
+            return nid ? markNotificationAsRead(nid) : Promise.resolve();
+          })
+        );
+        window.dispatchEvent(new CustomEvent('signalr:messages-read'));
+      }
+
+      // 2. Also mark unread messages in DB
+      const unreadMsgs = (currentMessages || []).filter(
+        (m) => !(m.isRead ?? m.IsRead) && String(m.senderId ?? m.SenderId) === String(conversationId)
+      );
+      unreadMsgs.forEach((m) => {
+        const mid = m.id ?? m.Id;
+        if (mid) markMessageAsRead(mid).catch(() => {});
+      });
+
+      // 3. Mark conversation as not unread in local state
+      if (conversationId) {
+        setConversations((prev) =>
+          prev.map((c) => (c.id === conversationId ? { ...c, isUnread: false } : c))
+        );
+      }
+    } catch (err) {
+      console.warn('[MessagePage] Failed to mark notifications as read:', err);
+    }
+  }, []);
+
   const loadMessages = async (conversation, pageNum = 1) => {
     if (!conversation) {
       setMessages([]);
@@ -260,20 +307,6 @@ export default function MessagePage() {
         (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
       );
 
-      console.log('PAGE:', pageNum);
-      console.log('RAW:', normalized.map(m => m.createdAt.toISOString()));
-
-      console.log("PAGE:", pageNum);
-      console.log(
-        "MIN:",
-        safeSorted[0]?.createdAt,
-        "MAX:",
-        safeSorted[safeSorted.length - 1]?.createdAt
-      );
-
-      // CRITICAL: Ensure messages are sorted by CreatedAt ASCENDING (oldest first)
-  
-
       if (pageNum === 1) {
         // 🎯 First load: Set messages in ascending order (oldest first)
         setMessages(safeSorted);
@@ -282,6 +315,9 @@ export default function MessagePage() {
         
         // Scroll to bottom after first load
         setTimeout(() => scrollToBottom(), 100);
+
+        // 🎯 Mark conversation notifications and unread messages as read
+        markConversationAsRead(conversation.id, safeSorted);
 
         if (safeSorted.length > 0) {
           const last = safeSorted[safeSorted.length - 1]; // Get the last (newest) message
@@ -525,6 +561,11 @@ export default function MessagePage() {
 
           return updated.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
         });
+
+        // 🎯 If message is from other user in active conversation, mark as read immediately
+        if (senderId !== currentUserId) {
+          markConversationAsRead(selectedConversation.id, [formattedMessage]);
+        }
 
         // Update last message in conversation list and re-sort
         setConversations((prev) => {

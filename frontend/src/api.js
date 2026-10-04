@@ -306,6 +306,28 @@ export async function markFeedNotificationsRead(userId) {
   return true;
 }
 
+/** Đánh dấu một thông báo cụ thể là đã đọc */
+export async function markNotificationAsRead(notificationId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/notifications/${notificationId}/read`, {
+    method: 'PUT',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  await handleResponse(response);
+  return true;
+}
+
+/** Đánh dấu một tin nhắn cụ thể là đã đọc */
+export async function markMessageAsRead(messageId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/messages/${messageId}/read`, {
+    method: 'PUT',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  await handleResponse(response);
+  return true;
+}
+
 const normalizeComment = (comment) => {
   const shaped = shapeComment(comment);
   if (shaped) return shaped;
