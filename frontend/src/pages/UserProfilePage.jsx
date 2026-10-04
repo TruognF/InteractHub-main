@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getUserPosts, getUser, likePost, unlikePost, sendFriendRequest, deletePost, getCommentsByPost, createComment, updateComment, deleteComment, getPostById, removeFriend, checkFriendshipStatus } from '../api';
+import { getUserPosts, getUser, likePost, unlikePost, sendFriendRequest, cancelFriendRequest, deletePost, getCommentsByPost, createComment, updateComment, deleteComment, getPostById, removeFriend, checkFriendshipStatus } from '../api';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import HashtagContent from '../components/HashtagContent';
@@ -23,6 +23,7 @@ export default function UserProfilePage() {
   const [activePostMenuId, setActivePostMenuId] = useState(null);
   const [friendRequestSent, setFriendRequestSent] = useState(false);
   const [isAddingFriend, setIsAddingFriend] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [isFriend, setIsFriend] = useState(false);
   const [showUnfriendConfirm, setShowUnfriendConfirm] = useState(false);
   const [isUnfriending, setIsUnfriending] = useState(false);
@@ -58,8 +59,9 @@ export default function UserProfilePage() {
         const relationshipStatus = String(statusData?.Status || statusData?.status || 'None');
         const isFriendAlready = relationshipStatus.toLowerCase() === 'accepted';
         const isPending = relationshipStatus.toLowerCase() === 'pending';
+        const isSender = statusData?.IsSender ?? statusData?.isSender ?? true;
         setIsFriend(isFriendAlready);
-        setFriendRequestSent(isPending);
+        setFriendRequestSent(isPending && isSender);
       }
     } catch (err) {
       console.error('Error loading user data:', err);
@@ -204,6 +206,25 @@ export default function UserProfilePage() {
       setError(`Lỗi gửi lời mời: ${err.message}`);
     } finally {
       setIsAddingFriend(false);
+    }
+  };
+
+  const handleCancelFriendRequest = async () => {
+    if (!currentUser || !user || isCancelling) return;
+
+    setIsCancelling(true);
+    try {
+      await cancelFriendRequest(user.Id || userId);
+      setFriendRequestSent(false);
+      setError('');
+      
+      // Emit event to notify other components
+      window.dispatchEvent(new Event('friendRequestCancelled'));
+    } catch (err) {
+      console.error('Error cancelling friend request:', err);
+      setError(`Lỗi hủy lời mời: ${err.message}`);
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -409,7 +430,29 @@ export default function UserProfilePage() {
             </div>
 
             <div className="profile-user-info">
-              <h1 className="profile-username">{user?.FullName || user?.fullName || user?.UserName || user?.userName}</h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                <h1 className="profile-username" style={{ margin: 0 }}>{user?.FullName || user?.fullName || user?.UserName || user?.userName}</h1>
+                {(user?.IsLocked ?? user?.isLocked) && (
+                  <span 
+                    className="locked-user-badge"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      backgroundColor: '#fee2e2',
+                      color: '#dc2626',
+                      border: '1px solid #ef4444',
+                      padding: '4px 10px',
+                      borderRadius: '16px',
+                      fontSize: '13px',
+                      fontWeight: '600'
+                    }}
+                  >
+                    <i className="fa-solid fa-lock"></i>
+                    <span>Tài khoản đã bị khóa</span>
+                  </span>
+                )}
+              </div>
 
               <div className="profile-bio">
                 {user?.Bio || user?.bio ? (
@@ -419,7 +462,7 @@ export default function UserProfilePage() {
                 )}
               </div>
 
-              {isFriend ? (
+              {(user?.IsLocked ?? user?.isLocked) ? null : isFriend ? (
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                   <div style={{ padding: '10px 20px', background: '#6b4fc7', color: 'white', borderRadius: '6px', fontWeight: '600', textAlign: 'center', flex: 1 }}>
                     ✓ Bạn bè
@@ -433,8 +476,30 @@ export default function UserProfilePage() {
                   </button>
                 </div>
               ) : friendRequestSent ? (
-                <div style={{ padding: '10px 20px', background: '#4caf50', color: 'white', borderRadius: '6px', fontWeight: '600', textAlign: 'center' }}>
-                  ✓ Đã gửi lời mời kết bạn
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <div style={{ padding: '10px 16px', background: '#4caf50', color: 'white', borderRadius: '6px', fontWeight: '600', textAlign: 'center', flex: 1 }}>
+                    ✓ Đã gửi lời mời
+                  </div>
+                  <button
+                    onClick={handleCancelFriendRequest}
+                    disabled={isCancelling}
+                    style={{ 
+                      padding: '10px 16px', 
+                      background: '#ef4444', 
+                      color: 'white', 
+                      borderRadius: '6px', 
+                      fontWeight: '600', 
+                      border: 'none', 
+                      cursor: isCancelling ? 'not-allowed' : 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                    title="Hủy lời mời kết bạn"
+                  >
+                    <i className="fa-solid fa-user-xmark"></i>
+                    <span>{isCancelling ? 'Đang hủy...' : 'Hủy lời mời'}</span>
+                  </button>
                 </div>
               ) : (
                 <button 

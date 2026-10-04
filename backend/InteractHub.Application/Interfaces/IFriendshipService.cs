@@ -30,6 +30,16 @@ public interface IFriendshipService
     Task<bool> DeclineFriendRequestAsync(int friendshipId, string currentUserId);
     
     /// <summary>
+    /// Hủy lời mời kết bạn đã gửi
+    /// </summary>
+    Task<bool> CancelFriendRequestAsync(string senderId, string receiverId);
+
+    /// <summary>
+    /// Lấy bản ghi quan hệ kết bạn giữa 2 người
+    /// </summary>
+    Task<Friendship?> GetFriendshipBetweenAsync(string userId1, string userId2);
+    
+    /// <summary>
     /// Chặn người dùng
     /// </summary>
     Task<Friendship> BlockUserAsync(string userId, string blockUserId);

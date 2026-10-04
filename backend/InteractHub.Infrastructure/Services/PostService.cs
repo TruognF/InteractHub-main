@@ -104,7 +104,10 @@ public class PostService : IPostService
 
     public async Task<(List<PostResponseDto> Posts, int TotalCount)> GetFeedAsync(int page, int pageSize)
     {
-        var query = _context.Posts.AsNoTracking().Where(p => p.GroupId == null && !p.IsDeleted);
+        var now = DateTimeOffset.UtcNow;
+        var query = _context.Posts.AsNoTracking()
+            .Where(p => p.GroupId == null && !p.IsDeleted &&
+                        (!p.User!.LockoutEnd.HasValue || p.User.LockoutEnd.Value <= now));
         var totalCount = await query.CountAsync();
         var posts = await query
             .OrderByDescending(p => p.CreatedAt)

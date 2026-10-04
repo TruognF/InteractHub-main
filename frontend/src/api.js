@@ -563,6 +563,18 @@ export async function declineFriendRequest(friendshipId) {
   return data?.Data || null;
 }
 
+export async function cancelFriendRequest(friendId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/friendships/cancel-request`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ friendId })
+  });
+  
+  const data = await handleResponse(response);
+  return data?.Data || data || null;
+}
+
 export async function sendMessage(receiverId, content, groupId = null) {
   const token = localStorage.getItem('token');
   const response = await fetch(`${API_BASE}/messages`, {

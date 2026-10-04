@@ -46,6 +46,7 @@ public class UsersController : ControllerBase
 
             var users = await _userService.GetUsersAsync(sanitizedSearch, 50);
 
+            var now = DateTimeOffset.UtcNow;
             var userDtos = users.Select(u => new UserResponseDto
             {
                 Id = u.Id,
@@ -53,7 +54,8 @@ public class UsersController : ControllerBase
                 Email = u.Email,
                 FullName = u.FullName,
                 ProfilePictureUrl = u.ProfilePictureUrl,
-                Bio = u.Bio
+                Bio = u.Bio,
+                IsLocked = u.LockoutEnd.HasValue && u.LockoutEnd.Value > now
             }).ToList();
 
             // Return just the array, not wrapped in metadata object
@@ -78,6 +80,7 @@ public class UsersController : ControllerBase
     {
         var ids = dto?.UserIds ?? new List<string>();
         var users = await _userService.GetByIdsAsync(ids);
+        var now = DateTimeOffset.UtcNow;
 
         var userDtos = users.Select(u => new UserResponseDto
         {
@@ -86,7 +89,8 @@ public class UsersController : ControllerBase
             Email = u.Email,
             FullName = u.FullName,
             ProfilePictureUrl = u.ProfilePictureUrl,
-            Bio = u.Bio
+            Bio = u.Bio,
+            IsLocked = u.LockoutEnd.HasValue && u.LockoutEnd.Value > now
         }).ToList();
 
         return this.SuccessResponse(userDtos, "Users retrieved successfully", 200);
@@ -109,7 +113,8 @@ public class UsersController : ControllerBase
             Email = user.Email,
             FullName = user.FullName,
             ProfilePictureUrl = user.ProfilePictureUrl,
-            Bio = user.Bio
+            Bio = user.Bio,
+            IsLocked = user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow
         };
 
         return this.SuccessResponse(userDto, "User retrieved successfully", 200);
@@ -132,7 +137,8 @@ public class UsersController : ControllerBase
             Email = user.Email,
             FullName = user.FullName,
             ProfilePictureUrl = user.ProfilePictureUrl,
-            Bio = user.Bio
+            Bio = user.Bio,
+            IsLocked = user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow
         };
 
         return this.SuccessResponse(userDto, "User retrieved successfully", 200);

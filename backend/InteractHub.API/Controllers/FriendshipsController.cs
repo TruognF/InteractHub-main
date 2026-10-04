@@ -256,6 +256,36 @@ public class FriendshipsController : ControllerBase
     }
 
     /// <summary>
+    /// Hủy lời mời kết bạn đã gửi
+    /// </summary>
+    [HttpPost("cancel-request")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CancelFriendRequest([FromBody] SendFriendRequestDto requestDto)
+    {
+        var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(currentUserId))
+            return this.UnauthorizedResponse("User not authenticated");
+
+        var result = await _friendshipService.CancelFriendRequestAsync(currentUserId, requestDto.FriendId);
+        if (!result)
+            return this.BadRequestResponse(new List<ApiError> 
+            { 
+                ErrorHelper.CreateValidationError("friendship", "Không tìm thấy lời mời kết bạn để hủy") 
+            });
+
+        // 🔔 Emit friend request cancelled event via SignalR to the receiver
+        await _notificationHub.Clients.Group($"notifications-{requestDto.FriendId}")
+            .SendAsync("FriendRequestCancelled", new
+            {
+                UserId = currentUserId,
+                FriendId = requestDto.FriendId
+            });
+
+        return this.SuccessResponse(message: "Đã hủy lời mời kết bạn");
+    }
+
+    /// <summary>
     /// Xóa bạn bè
     /// </summary>
     [HttpDelete("remove/{friendId}")]
@@ -364,13 +394,15 @@ public class FriendshipsController : ControllerBase
         if (string.IsNullOrEmpty(userId))
             return this.UnauthorizedResponse("User not authenticated");
 
-        var status = await _friendshipService.CheckFriendshipStatusAsync(userId, friendId);
+        var friendship = await _friendshipService.GetFriendshipBetweenAsync(userId, friendId);
 
         var result = new
         {
             UserId = userId,
             FriendId = friendId,
-            Status = status?.ToString() ?? "None"
+            Status = friendship?.Status.ToString() ?? "None",
+            IsSender = friendship != null && friendship.UserId == userId,
+            FriendshipId = friendship?.Id
         };
 
         return this.SuccessResponse(result);

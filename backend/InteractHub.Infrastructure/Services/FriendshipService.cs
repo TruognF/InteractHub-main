@@ -162,6 +162,33 @@ public class FriendshipService : IFriendshipService
     }
 
     /// <summary>
+    /// Hủy lời mời kết bạn đã gửi
+    /// </summary>
+    public async Task<bool> CancelFriendRequestAsync(string senderId, string receiverId)
+    {
+        var friendship = await _context.Friendships
+            .FirstOrDefaultAsync(f => f.UserId == senderId && f.FriendId == receiverId && f.Status == FriendshipStatus.Pending);
+
+        if (friendship == null)
+            return false;
+
+        _context.Friendships.Remove(friendship);
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    /// <summary>
+    /// Lấy bản ghi quan hệ kết bạn giữa 2 người
+    /// </summary>
+    public async Task<Friendship?> GetFriendshipBetweenAsync(string userId1, string userId2)
+    {
+        return await _context.Friendships.AsNoTracking()
+            .FirstOrDefaultAsync(f =>
+                (f.UserId == userId1 && f.FriendId == userId2) ||
+                (f.UserId == userId2 && f.FriendId == userId1));
+    }
+
+    /// <summary>
     /// Chặn người dùng
     /// </summary>
     public async Task<Friendship> BlockUserAsync(string userId, string blockUserId)
