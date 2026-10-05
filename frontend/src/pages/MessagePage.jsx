@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getConversationsSorted, getConversationMessages, sendMessage, updateMessage, recallMessage, getNotifications, markNotificationAsRead, markMessageAsRead } from '../api';
+import { getConversationsSorted, getConversationMessages, sendMessage, updateMessage, recallMessage, getNotifications, markNotificationAsRead, markMessageAsRead, getUsersByIds, getUser } from '../api';
 import { messageHubConnection } from '../utils/messageHubConnection';
 import { isMessageNotificationType } from '../utils/notificationPayload';
 import Header from '../components/Header';
@@ -96,7 +96,7 @@ export default function MessagePage() {
         const conversationsData = await getConversationsSorted(normalizedUser.Id);
         console.log('[MessagePage] 💬 Conversations loaded:', conversationsData?.length || 0);
         
-        const conversationList = (conversationsData || [])
+        let conversationList = (conversationsData || [])
           .filter((convo) => !(convo.IsGroup ?? convo.isGroup ?? false))
           .map((convo) => ({
           id: convo.Id || convo.id || convo.FriendId || convo.friendId,
@@ -111,8 +111,28 @@ export default function MessagePage() {
             ? new Date(convo.LastMessageTime || convo.lastMessageTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
             : convo.lastTime || '',
           isGroup: false,
-          participantCount: convo.ParticipantCount ?? convo.participantCount ?? 2
+          participantCount: convo.ParticipantCount ?? convo.participantCount ?? 2,
+          isLocked: false
         }));
+
+        // Batch load locked status for users
+        const friendIds = conversationList.map((c) => c.id).filter(Boolean);
+        if (friendIds.length > 0) {
+          try {
+            const usersInfo = await getUsersByIds(friendIds);
+            const lockedMap = {};
+            (usersInfo || []).forEach((u) => {
+              const uid = u.Id ?? u.id;
+              if (uid) lockedMap[uid] = Boolean(u.IsLocked ?? u.isLocked);
+            });
+            conversationList = conversationList.map((c) => ({
+              ...c,
+              isLocked: Boolean(lockedMap[c.id])
+            }));
+          } catch (err) {
+            console.warn('[MessagePage] Failed to fetch user lock status:', err);
+          }
+        }
 
         setConversations(sortConversationsByLatest(conversationList));
         
@@ -355,7 +375,18 @@ export default function MessagePage() {
   };
 
   const handleSelectConversation = async (conversation) => {
-    setSelectedConversation(conversation);
+    let currentConv = conversation;
+    if (currentConv && currentConv.isLocked === undefined && !currentConv.isGroup) {
+      try {
+        const u = await getUser(currentConv.id);
+        const isLocked = Boolean(u?.IsLocked ?? u?.isLocked);
+        currentConv = { ...currentConv, isLocked };
+        setConversations((prev) => prev.map((c) => (c.id === currentConv.id ? { ...c, isLocked } : c)));
+      } catch (err) {
+        console.warn('[MessagePage] Failed to fetch user lock status:', err);
+      }
+    }
+    setSelectedConversation(currentConv);
     
     // 🔄 Leave previous conversation group
     if (previousConversationRef.current && messageHubConnection.isActive()) {
@@ -393,6 +424,11 @@ export default function MessagePage() {
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
+
+    if (selectedConversation.isLocked) {
+      alert('Tài khoản này hiện đang bị khóa, bạn không thể gửi tin nhắn.');
+      return;
+    }
 
     if (newMessage.length > 2000) {
       alert('Nội dung tin nhắn không được vượt quá 2000 ký tự');
@@ -824,6 +860,11 @@ export default function MessagePage() {
                   <div className="conversation-info">
                     <p className="conversation-name">
                       {conversation.name}
+                      {conversation.isLocked && (
+                        <span title="Tài khoản đã bị khóa" style={{ marginLeft: '6px', color: '#dc2626', fontSize: '12px' }}>
+                          <i className="fa-solid fa-lock"></i>
+                        </span>
+                      )}
                       {conversation.isGroup && conversation.participantCount && (
                         <span className="participant-count"> ({conversation.participantCount})</span>
                       )}
@@ -850,16 +891,40 @@ export default function MessagePage() {
                     ) : (
                       <span className="conversation-avatar-fallback">{selectedConversation.name?.charAt(0)?.toUpperCase() || 'U'}</span>
                     )}
-                    {selectedConversation.isActive && <span className="online-status"></span>}
+                    {selectedConversation.isActive && !selectedConversation.isLocked && <span className="online-status"></span>}
                   </div>
                   <div>
-                    <h3 className="message-header-name">{selectedConversation.name}</h3>
-                    <p className="message-header-status">
-                      {selectedConversation.isActive
-                        ? '🟢 Đang hoạt động'
-                        : `${formatLastSeen(selectedConversation.lastSeenAt)}`
-                      }
-                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <h3 className="message-header-name">{selectedConversation.name}</h3>
+                      {selectedConversation.isLocked && (
+                        <span 
+                          className="locked-badge"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            backgroundColor: '#fee2e2',
+                            color: '#dc2626',
+                            border: '1px solid #ef4444',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontSize: '11px',
+                            fontWeight: '600'
+                          }}
+                        >
+                          <i className="fa-solid fa-lock"></i>
+                          <span>Tài khoản đã bị khóa</span>
+                        </span>
+                      )}
+                    </div>
+                    {!selectedConversation.isLocked && (
+                      <p className="message-header-status">
+                        {selectedConversation.isActive
+                          ? '🟢 Đang hoạt động'
+                          : `${formatLastSeen(selectedConversation.lastSeenAt)}`
+                        }
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -976,23 +1041,41 @@ export default function MessagePage() {
               </div>
 
               {/* Message Input */}
-              <div className="message-input-wrapper">
-                <input
-                  type="text"
-                  placeholder="Nhập tin nhắn..."
-                  value={newMessage}
-                  maxLength={2000}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                  className="message-input"
-                />
-                {newMessage.length > 1800 && (
-                  <span className="message-char-count">{newMessage.length}/2000</span>
-                )}
-                <button onClick={handleSendMessage} className="message-send-btn">
-                  ➤
-                </button>
-              </div>
+              {selectedConversation.isLocked ? (
+                <div className="message-locked-warning-area" style={{
+                  padding: '16px 20px',
+                  backgroundColor: '#fff1f2',
+                  borderTop: '1px solid #fecdd3',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                  color: '#be123c',
+                  fontSize: '14px',
+                  fontWeight: '500'
+                }}>
+                  <i className="fa-solid fa-circle-exclamation" style={{ fontSize: '18px' }}></i>
+                  <span>Tài khoản này hiện đang bị khóa, bạn không thể gửi tin nhắn.</span>
+                </div>
+              ) : (
+                <div className="message-input-wrapper">
+                  <input
+                    type="text"
+                    placeholder="Nhập tin nhắn..."
+                    value={newMessage}
+                    maxLength={2000}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                    className="message-input"
+                  />
+                  {newMessage.length > 1800 && (
+                    <span className="message-char-count">{newMessage.length}/2000</span>
+                  )}
+                  <button onClick={handleSendMessage} className="message-send-btn">
+                    ➤
+                  </button>
+                </div>
+              )}
             </>
           ) : (
             <div className="no-conversation-selected">

@@ -29,6 +29,14 @@ export default function NotificationHubBridge({ token }) {
       }
     });
 
+    connection.on('ForceLogout', (message) => {
+      alert(message || 'Tài khoản của bạn đã bị khóa bởi quản trị viên.');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.dispatchEvent(new Event('tokenUpdated'));
+      window.location.href = '/login';
+    });
+
     connection
       .start()
       .then(() => {

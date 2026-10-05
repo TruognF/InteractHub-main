@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.SignalR;
 using InteractHub.Application.Entities;
 using InteractHub.Application.Constants;
 using InteractHub.API.DTOs;
 using InteractHub.API.DTOs.Response;
 using InteractHub.API.Extensions;
+using InteractHub.Infrastructure.Hubs;
 
 namespace InteractHub.API.Controllers;
 
@@ -16,13 +18,16 @@ public class AdminController : ControllerBase
 {
     private readonly UserManager<User> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
+    private readonly IHubContext<NotificationHub>? _notificationHubContext;
 
     public AdminController(
         UserManager<User> userManager,
-        RoleManager<IdentityRole> roleManager)
+        RoleManager<IdentityRole> roleManager,
+        IHubContext<NotificationHub>? notificationHubContext = null)
     {
         _userManager = userManager;
         _roleManager = roleManager;
+        _notificationHubContext = notificationHubContext;
     }
 
     // ✅ GET /api/admin/users-with-roles
@@ -180,6 +185,15 @@ public class AdminController : ControllerBase
             // Khóa
             await _userManager.SetLockoutEnabledAsync(user, true);
             await _userManager.SetLockoutEndDateAsync(user, DateTimeOffset.UtcNow.AddYears(100));
+
+            // ⚡ Phát tín hiệu ForceLogout qua SignalR tới user bị khóa
+            if (_notificationHubContext != null)
+            {
+                await _notificationHubContext.Clients
+                    .Group($"notifications-{user.Id}")
+                    .SendAsync("ForceLogout", "Tài khoản của bạn đã bị khóa bởi quản trị viên.");
+            }
+
             return this.SuccessResponse(new { isLocked = true, message = $"Đã khóa tài khoản '{user.UserName}'" });
         }
     }
