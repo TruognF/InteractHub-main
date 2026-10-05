@@ -18,5 +18,6 @@ public class Message
     public bool IsRead { get; set; } = false;
     public bool IsEdited { get; set; } = false;
     public bool IsDeleted { get; set; } = false;
+    public string? ImageUrl { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }

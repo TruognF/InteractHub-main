@@ -46,13 +46,14 @@ public class MessageService : IMessageService
             .CountAsync();
     }
 
-    public async Task<Message> SendMessageAsync(string senderId, string receiverId, string content)
+    public async Task<Message> SendMessageAsync(string senderId, string receiverId, string content, string? imageUrl = null)
     {
         var message = new Message
         {
             SenderId = senderId,
             ReceiverId = receiverId,
             Content = content,
+            ImageUrl = imageUrl,
             CreatedAt = DateTime.UtcNow,
             IsRead = false
         };
@@ -87,13 +88,14 @@ public class MessageService : IMessageService
             .ToListAsync();
     }
 
-    public async Task<Message> SendGroupMessageAsync(string senderId, int groupId, string content)
+    public async Task<Message> SendGroupMessageAsync(string senderId, int groupId, string content, string? imageUrl = null)
     {
         var message = new Message
         {
             SenderId = senderId,
             GroupId = groupId,
             Content = content,
+            ImageUrl = imageUrl,
             CreatedAt = DateTime.UtcNow,
             IsRead = false
         };

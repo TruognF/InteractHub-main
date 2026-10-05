@@ -597,12 +597,12 @@ export async function cancelFriendRequest(friendId) {
   return data?.Data || data || null;
 }
 
-export async function sendMessage(receiverId, content, groupId = null) {
+export async function sendMessage(receiverId, content, groupId = null, imageUrl = null) {
   const token = localStorage.getItem('token');
   const response = await fetch(`${API_BASE}/messages`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-    body: JSON.stringify({ receiverId, content, groupId })
+    body: JSON.stringify({ receiverId, content, groupId, imageUrl })
   });
   const data = await handleResponse(response);
   return data?.Data || null;

@@ -21,17 +21,20 @@ public class MessagesController : ControllerBase
     private readonly INotificationService _notificationService;
     private readonly IGroupService _groupService;
     private readonly IHubContext<MessageHub> _messageHubContext;
+    private readonly IImageStorageService _imageStorage;
 
     public MessagesController(
         IMessageService messageService, 
         INotificationService notificationService,
         IGroupService groupService,
-        IHubContext<MessageHub> messageHubContext)
+        IHubContext<MessageHub> messageHubContext,
+        IImageStorageService imageStorage)
     {
         _messageService = messageService;
         _notificationService = notificationService;
         _groupService = groupService;
         _messageHubContext = messageHubContext;
+        _imageStorage = imageStorage;
     }
 
     [HttpGet("conversation/{userId}")]
@@ -66,7 +69,8 @@ public class MessagesController : ControllerBase
             ReceiverName = m.Receiver?.UserName ?? "Unknown",
             IsRead = m.IsRead,
             IsEdited = m.IsEdited,
-            IsDeleted = m.IsDeleted
+            IsDeleted = m.IsDeleted,
+            ImageUrl = m.IsDeleted ? null : m.ImageUrl
         }).ToList();
 
         return this.SuccessResponse(new
@@ -120,7 +124,8 @@ public class MessagesController : ControllerBase
             GroupName = m.Group?.Name,
             IsRead = m.IsRead,
             IsEdited = m.IsEdited,
-            IsDeleted = m.IsDeleted
+            IsDeleted = m.IsDeleted,
+            ImageUrl = m.IsDeleted ? null : m.ImageUrl
         }).ToList();
 
         return this.SuccessResponse(new
@@ -145,11 +150,18 @@ public class MessagesController : ControllerBase
         if (string.IsNullOrEmpty(senderId))
             return Unauthorized();
 
-        if (string.IsNullOrWhiteSpace(dto.Content))
-            return BadRequest("Message content is required");
+        var content = dto.Content?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(content) && string.IsNullOrWhiteSpace(dto.ImageUrl))
+            return BadRequest("Nội dung tin nhắn hoặc hình ảnh không được để trống");
 
-        if (dto.Content.Length > 2000)
+        if (content.Length > 2000)
             return BadRequest("Nội dung tin nhắn không được vượt quá 2000 ký tự");
+
+        string? savedImageUrl = null;
+        if (!string.IsNullOrWhiteSpace(dto.ImageUrl))
+        {
+            savedImageUrl = await _imageStorage.SaveDataUriAsync(dto.ImageUrl, "messages");
+        }
 
         Message message;
         if (dto.GroupId.HasValue)
@@ -163,7 +175,7 @@ public class MessagesController : ControllerBase
             if (!group.Memberships.Any(m => m.UserId == senderId))
                 return BadRequest("You are not a member of this group");
 
-            message = await _messageService.SendGroupMessageAsync(senderId, dto.GroupId.Value, dto.Content);
+            message = await _messageService.SendGroupMessageAsync(senderId, dto.GroupId.Value, content, savedImageUrl);
         }
         else
         {
@@ -171,18 +183,20 @@ public class MessagesController : ControllerBase
             if (string.IsNullOrEmpty(dto.ReceiverId))
                 return BadRequest("ReceiverId is required for personal messages");
 
-            message = await _messageService.SendMessageAsync(senderId, dto.ReceiverId, dto.Content);
+            message = await _messageService.SendMessageAsync(senderId, dto.ReceiverId, content, savedImageUrl);
         }
 
         if (message.ReceiverId != null && message.ReceiverId != message.SenderId)
         {
-            await _notificationService.NotifyMessageAsync(message.ReceiverId, message.SenderId, message.Id, message.Content);
+            var notifContent = string.IsNullOrEmpty(message.Content) ? "[Hình ảnh]" : message.Content;
+            await _notificationService.NotifyMessageAsync(message.ReceiverId, message.SenderId, message.Id, notifContent);
         }
 
         var messageDto = new MessageResponseDto
         {
             Id = message.Id,
             Content = message.Content,
+            ImageUrl = message.ImageUrl,
             CreatedAt = message.CreatedAt,
             SenderId = message.SenderId,
             SenderName = message.Sender?.UserName ?? "Unknown",

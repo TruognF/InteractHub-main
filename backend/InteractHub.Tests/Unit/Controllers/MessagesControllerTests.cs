@@ -18,17 +18,20 @@ public class MessagesControllerTests
         Mock<IMessageService> messageServiceMock,
         Mock<INotificationService>? notificationServiceMock = null,
         Mock<IGroupService>? groupServiceMock = null,
-        Mock<IHubContext<MessageHub>>? messageHubMock = null)
+        Mock<IHubContext<MessageHub>>? messageHubMock = null,
+        Mock<IImageStorageService>? imageStorageMock = null)
     {
         var notifMock = notificationServiceMock ?? new Mock<INotificationService>();
         var grpMock = groupServiceMock ?? new Mock<IGroupService>();
         var hubMock = messageHubMock ?? SignalRMockFactory.CreateMessageHubMock();
+        var imgMock = imageStorageMock ?? new Mock<IImageStorageService>();
 
         return new MessagesController(
             messageServiceMock.Object,
             notifMock.Object,
             grpMock.Object,
-            hubMock.Object);
+            hubMock.Object,
+            imgMock.Object);
     }
 
     [Fact]
@@ -203,5 +206,46 @@ public class MessagesControllerTests
         // Assert
         var objResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status403Forbidden, objResult.StatusCode);
+    }
+
+    [Fact]
+    public async Task SendMessage_ShouldSucceed_WhenOnlyImageIsProvided()
+    {
+        // Arrange
+        var messageServiceMock = new Mock<IMessageService>();
+        var imageStorageMock = new Mock<IImageStorageService>();
+        imageStorageMock.Setup(s => s.SaveDataUriAsync("data:image/png;base64,abc", "messages", null))
+            .ReturnsAsync("/uploads/messages/img.png");
+
+        var createdMessage = new Message
+        {
+            Id = 99,
+            SenderId = "user-1",
+            ReceiverId = "user-2",
+            Content = "",
+            ImageUrl = "/uploads/messages/img.png",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        messageServiceMock.Setup(s => s.SendMessageAsync("user-1", "user-2", "", "/uploads/messages/img.png"))
+            .ReturnsAsync(createdMessage);
+
+        var controller = CreateController(messageServiceMock, imageStorageMock: imageStorageMock);
+        ControllerTestHelper.SetUser(controller, "user-1");
+
+        var dto = new CreateMessageDto
+        {
+            Content = "",
+            ImageUrl = "data:image/png;base64,abc",
+            ReceiverId = "user-2"
+        };
+
+        // Act
+        var result = await controller.SendMessage(dto);
+
+        // Assert
+        var createdResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status201Created, createdResult.StatusCode);
+        messageServiceMock.Verify(s => s.SendMessageAsync("user-1", "user-2", "", "/uploads/messages/img.png"), Times.Once);
     }
 }

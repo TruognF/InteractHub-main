@@ -35,6 +35,42 @@ export default function MessagePage() {
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
   const [error, setError] = useState('');
   const [onlineFriends, setOnlineFriends] = useState([]);
+  const [selectedImageFile, setSelectedImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [viewingImageUrl, setViewingImageUrl] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      alert('Chỉ hỗ trợ tệp hình ảnh định dạng JPG, PNG, GIF, WebP.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    const MAX_SIZE = 5 * 1024 * 1024; // 5MB (TRD-T78)
+    if (file.size > MAX_SIZE) {
+      alert('Dung lượng tệp hình ảnh không được vượt quá 5MB.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    setSelectedImageFile(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImagePreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveSelectedImage = () => {
+    setSelectedImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
   
   const navigate = useNavigate();
   const unsubscribeRef = useRef(null);
@@ -317,6 +353,7 @@ export default function MessagePage() {
         id: message.Id || message.id,
         senderId: message.SenderId || message.senderId,
         text: (message.IsDeleted ?? message.isDeleted) ? 'tin nhắn đã được thu hồi' : (message.Content || message.content),
+        imageUrl: (message.IsDeleted ?? message.isDeleted) ? null : (message.ImageUrl || message.imageUrl || null),
         isEdited: message.IsEdited ?? message.isEdited ?? false,
         isDeleted: message.IsDeleted ?? message.isDeleted ?? false,
         timestamp: new Date(message.CreatedAt || message.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
@@ -423,7 +460,7 @@ export default function MessagePage() {
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedConversation) return;
+    if ((!newMessage.trim() && !imagePreview) || !selectedConversation) return;
 
     if (selectedConversation.isLocked) {
       alert('Tài khoản này hiện đang bị khóa, bạn không thể gửi tin nhắn.');
@@ -435,19 +472,26 @@ export default function MessagePage() {
       return;
     }
 
+    const payloadImage = imagePreview;
+    const textToSend = newMessage.trim();
+    handleRemoveSelectedImage();
+    setNewMessage('');
+
     try {
-      const sentMessage = await sendMessage(selectedConversation.id, newMessage.trim());
+      const sentMessage = await sendMessage(selectedConversation.id, textToSend, null, payloadImage);
       
       console.log('[MessagePage] 📤 API Response:', { 
         Id: sentMessage?.Id, 
         Content: sentMessage?.Content,
+        ImageUrl: sentMessage?.ImageUrl,
         CreatedAt: sentMessage?.CreatedAt 
       });
       
       const nextMessage = {
         id: sentMessage?.Id || sentMessage?.id || messages.length + 1,
         senderId: sentMessage?.SenderId || sentMessage?.senderId || currentUser?.Id || currentUser?.id,
-        text: sentMessage?.Content || sentMessage?.content || newMessage.trim(),
+        text: sentMessage?.Content ?? sentMessage?.content ?? textToSend,
+        imageUrl: sentMessage?.ImageUrl || sentMessage?.imageUrl || payloadImage,
         isEdited: false,
         isDeleted: false,
         timestamp: new Date(sentMessage?.CreatedAt || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
@@ -476,16 +520,15 @@ export default function MessagePage() {
       });
       
       // Update conversations and re-sort by latest message
+      const lastMsgText = nextMessage.text || (nextMessage.imageUrl ? '[Hình ảnh]' : '');
       setConversations((prev) => {
         const updated = prev.map((item) =>
           item.id === selectedConversation.id
-            ? { ...item, lastMessage: nextMessage.text, lastTime: nextMessage.timestamp, lastMessageAt: nextMessage.createdAt.toISOString(), isUnread: false }
+            ? { ...item, lastMessage: lastMsgText, lastTime: nextMessage.timestamp, lastMessageAt: nextMessage.createdAt.toISOString(), isUnread: false }
             : item
         );
         return sortConversationsByLatest(updated);
       });
-      
-      setNewMessage('');
       
       // Always scroll to bottom after sending
       scrollToBottom();
@@ -583,6 +626,7 @@ export default function MessagePage() {
           id: incomingMessage.id ?? incomingMessage.Id,
           senderId: incomingMessage.senderId ?? incomingMessage.SenderId,
           text: incomingMessage.content ?? incomingMessage.Content,
+          imageUrl: incomingMessage.imageUrl ?? incomingMessage.ImageUrl ?? null,
           timestamp: new Date(incomingMessage.createdAt ?? incomingMessage.CreatedAt)
             .toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
           createdAt: new Date(incomingMessage.createdAt ?? incomingMessage.CreatedAt) // ✅ QUAN TRỌNG
@@ -604,10 +648,11 @@ export default function MessagePage() {
         }
 
         // Update last message in conversation list and re-sort
+        const incomingLastMsg = formattedMessage.text || (formattedMessage.imageUrl ? '[Hình ảnh]' : '');
         setConversations((prev) => {
           const updated = prev.map((item) =>
             item.id === selectedConversation.id
-              ? { ...item, lastMessage: formattedMessage.text, lastTime: formattedMessage.timestamp, lastMessageAt: formattedMessage.createdAt.toISOString() }
+              ? { ...item, lastMessage: incomingLastMsg, lastTime: formattedMessage.timestamp, lastMessageAt: formattedMessage.createdAt.toISOString() }
               : item
           );
           return sortConversationsByLatest(updated);
@@ -1025,7 +1070,20 @@ export default function MessagePage() {
                           </div>
                         ) : (
                           <>
-                            <p className={isRecalled ? 'recalled-text' : ''}>{message.text}</p>
+                            {message.imageUrl && !isRecalled && (
+                              <div className="message-image-container">
+                                <img
+                                  src={message.imageUrl}
+                                  alt="Attachment"
+                                  className="message-image-attachment"
+                                  onClick={() => setViewingImageUrl(message.imageUrl)}
+                                  title="Nhấp để xem kích thước lớn"
+                                />
+                              </div>
+                            )}
+                            {message.text && (
+                              <p className={isRecalled ? 'recalled-text' : ''}>{message.text}</p>
+                            )}
                             <span className="message-time">{message.timestamp}</span>
                             {message.isEdited && !isRecalled && (
                               <div className="message-edited-notice">
@@ -1058,23 +1116,55 @@ export default function MessagePage() {
                   <span>Tài khoản này hiện đang bị khóa, bạn không thể gửi tin nhắn.</span>
                 </div>
               ) : (
-                <div className="message-input-wrapper">
-                  <input
-                    type="text"
-                    placeholder="Nhập tin nhắn..."
-                    value={newMessage}
-                    maxLength={2000}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                    className="message-input"
-                  />
-                  {newMessage.length > 1800 && (
-                    <span className="message-char-count">{newMessage.length}/2000</span>
+                <>
+                  {imagePreview && (
+                    <div className="message-image-preview-bar">
+                      <div className="preview-image-wrapper">
+                        <img src={imagePreview} alt="Preview" className="preview-thumb" />
+                        <button
+                          type="button"
+                          className="preview-remove-btn"
+                          onClick={handleRemoveSelectedImage}
+                          title="Xóa ảnh"
+                        >
+                          <i className="fa-solid fa-xmark"></i>
+                        </button>
+                      </div>
+                    </div>
                   )}
-                  <button onClick={handleSendMessage} className="message-send-btn">
-                    ➤
-                  </button>
-                </div>
+                  <div className="message-input-wrapper">
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      style={{ display: 'none' }}
+                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      onChange={handleImageSelect}
+                    />
+                    <button
+                      type="button"
+                      className="message-attach-btn"
+                      onClick={() => fileInputRef.current?.click()}
+                      title="Đính kèm ảnh"
+                    >
+                      <i className="fa-regular fa-image"></i>
+                    </button>
+                    <input
+                      type="text"
+                      placeholder="Nhập tin nhắn..."
+                      value={newMessage}
+                      maxLength={2000}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                      className="message-input"
+                    />
+                    {newMessage.length > 1800 && (
+                      <span className="message-char-count">{newMessage.length}/2000</span>
+                    )}
+                    <button onClick={handleSendMessage} className="message-send-btn">
+                      ➤
+                    </button>
+                  </div>
+                </>
               )}
             </>
           ) : (
@@ -1121,6 +1211,23 @@ export default function MessagePage() {
           </div>
         </aside>
       </div>
+      
+      {/* Lightbox Image Viewer */}
+      {viewingImageUrl && (
+        <div className="image-viewer-overlay" onClick={() => setViewingImageUrl(null)}>
+          <div className="image-viewer-content" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="image-viewer-close"
+              onClick={() => setViewingImageUrl(null)}
+              title="Đóng"
+            >
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+            <img src={viewingImageUrl} alt="Full view" className="image-viewer-img" />
+          </div>
+        </div>
+      )}
 
     </div>
   );
