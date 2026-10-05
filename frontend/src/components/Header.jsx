@@ -78,18 +78,14 @@ export default function Header({ onLogout, showControls = true, onSearch, search
   const handleSearchSubmit = (event) => {
     event.preventDefault();
     const query = searchQuery.trim();
-    if (!query) return;
-
-    const match = query.match(/#?([a-zA-Z0-9_]+)/);
-    if (!match || !match[1]) return;
-
-    const hashtag = match[1];
-    const normalized = `#${hashtag}`;
-    setSearchQuery(normalized);
     if (typeof onSearch === 'function') {
-      onSearch(hashtag);
-    } else {
-      navigate(`/home?hashtag=${encodeURIComponent(hashtag)}`);
+      onSearch(query);
+    } else if (query) {
+      if (query.startsWith('#')) {
+        navigate(`/home?hashtag=${encodeURIComponent(query.slice(1))}`);
+      } else {
+        navigate(`/home?search=${encodeURIComponent(query)}`);
+      }
     }
   };
 
@@ -109,16 +105,12 @@ export default function Header({ onLogout, showControls = true, onSearch, search
                   type="text" 
                   placeholder="Tìm kiếm"
                   value={searchQuery}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setSearchQuery(value);
-                    if (typeof onSearch === 'function') {
-                      onSearch(value);
-                    }
-                  }}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   className="search-input"
                 />
-                <button type="submit" className="search-btn"><i className="fa-solid fa-magnifying-glass"></i></button>
+                <button type="submit" className="search-btn" title="Tìm kiếm">
+                  <i className="fa-solid fa-magnifying-glass"></i>
+                </button>
               </form>
             </div>
 

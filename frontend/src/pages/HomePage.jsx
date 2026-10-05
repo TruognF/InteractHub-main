@@ -42,6 +42,9 @@ export default function HomePage() {
   const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const [searchKeyword, setSearchKeyword] = useState(''); // For keyword search
+  const [searchUsers, setSearchUsers] = useState([]);
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+  const [showAllSearchUsers, setShowAllSearchUsers] = useState(false);
   const [newStoryContent, setNewStoryContent] = useState('');
   const [newStoryFile, setNewStoryFile] = useState(null);
   const [storyImagePreview, setStoryImagePreview] = useState('');
@@ -810,20 +813,70 @@ export default function HomePage() {
       // Keyword search
       setHashtagSearch(null);
       setSearchKeyword(query);
+      navigate(`/home?search=${encodeURIComponent(query)}`);
     }
   };
 
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
     const hashtagParam = queryParams.get('hashtag');
+    const searchParam = queryParams.get('search') || queryParams.get('q');
+
     if (hashtagParam) {
       const hashtag = extractHashtag(hashtagParam);
       setHashtagSearch(hashtag);
       setSearchKeyword('');
+    } else if (searchParam) {
+      const trimmed = searchParam.trim();
+      const hashtag = extractHashtag(trimmed);
+      if (hashtag && trimmed.startsWith('#')) {
+        setHashtagSearch(hashtag);
+        setSearchKeyword('');
+      } else {
+        setHashtagSearch(null);
+        setSearchKeyword(trimmed);
+      }
     } else {
       setHashtagSearch(null);
+      setSearchKeyword('');
     }
   }, [location.search]);
+
+  useEffect(() => {
+    if (!searchKeyword.trim()) {
+      setSearchUsers([]);
+      setShowAllSearchUsers(false);
+      setIsSearchingUsers(false);
+      return;
+    }
+
+    let isMounted = true;
+    setIsSearchingUsers(true);
+    setShowAllSearchUsers(false);
+
+    getAllUsers(searchKeyword.trim())
+      .then((users) => {
+        if (isMounted) {
+          const matched = (users || []).filter((u) => u.Id !== currentUser?.Id);
+          setSearchUsers(matched);
+        }
+      })
+      .catch((err) => {
+        console.error('Error fetching search users:', err);
+        if (isMounted) {
+          setSearchUsers([]);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsSearchingUsers(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [searchKeyword, currentUser?.Id]);
 
   const handleLike = async (post) => {
     if (!currentUser) {
@@ -1170,8 +1223,9 @@ export default function HomePage() {
   // Filter posts based on search type
   const displayedPosts = searchKeyword
     ? posts.filter(post => 
-        (post.Content || '').toLowerCase().includes(searchKeyword.toLowerCase()) ||
-        (post.UserFullName || '').toLowerCase().includes(searchKeyword.toLowerCase())
+        matchesSearch(post.Content || '', searchKeyword) ||
+        matchesSearch(post.UserFullName || '', searchKeyword) ||
+        matchesSearch(post.UserName || '', searchKeyword)
       )
     : hashtagSearch
     ? posts.filter(post => hasHashtag(post.Content || '', hashtagSearch))
@@ -1530,10 +1584,89 @@ export default function HomePage() {
           </section>
           )}
 
+          {/* Phần 1: Người dùng liên quan (khi tìm kiếm) */}
+          {searchKeyword && (
+            <section className="search-section search-users-section">
+              <div className="search-section-header">
+                <h3 className="search-section-title">
+                  <i className="fa-solid fa-users"></i> Người dùng liên quan
+                  <span className="search-count-badge">{searchUsers.length}</span>
+                </h3>
+              </div>
+
+              {isSearchingUsers ? (
+                <div className="search-loading">
+                  <i className="fa-solid fa-spinner fa-spin"></i> Đang tìm kiếm người dùng...
+                </div>
+              ) : searchUsers.length === 0 ? (
+                <p className="no-search-results">Không tìm thấy người dùng nào phù hợp với &quot;{searchKeyword}&quot;.</p>
+              ) : (
+                <>
+                  <div className="search-users-grid">
+                    {(showAllSearchUsers ? searchUsers : searchUsers.slice(0, 3)).map((user) => (
+                      <div
+                        key={user.Id}
+                        className="search-user-card"
+                        onClick={() => handleOpenUserProfile(user.Id)}
+                      >
+                        <div className="search-user-avatar">
+                          {user.ProfilePictureUrl ? (
+                            <img src={user.ProfilePictureUrl} alt={user.FullName || user.UserName} />
+                          ) : (
+                            <i className="fa-solid fa-user"></i>
+                          )}
+                        </div>
+                        <div className="search-user-info">
+                          <span className="search-user-name">{user.FullName || user.UserName}</span>
+                          {user.UserName && <span className="search-user-handle">@{user.UserName}</span>}
+                          {user.Bio && <p className="search-user-bio">{user.Bio}</p>}
+                        </div>
+                        <button
+                          className="search-user-view-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenUserProfile(user.Id);
+                          }}
+                        >
+                          Xem hồ sơ
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {searchUsers.length > 3 && (
+                    <div className="search-view-more-container">
+                      <button
+                        className="search-view-more-btn"
+                        onClick={() => setShowAllSearchUsers((prev) => !prev)}
+                      >
+                        {showAllSearchUsers ? (
+                          <>
+                            <i className="fa-solid fa-chevron-up"></i> Thu gọn
+                          </>
+                        ) : (
+                          <>
+                            <i className="fa-solid fa-chevron-down"></i> Xem thêm ({searchUsers.length - 3} người dùng khác)
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </section>
+          )}
+
+          
+
           <section className="posts-feed" onScroll={handlePostsScroll}>
             {displayedPosts.length === 0 ? (
               <p className="no-posts">
-                {hashtagSearch ? `Không có bài viết nào với ${hashtagSearch}.` : 'Chưa có bài viết nào. Hãy tạo bài viết đầu tiên!'}
+                {hashtagSearch
+                  ? `Không có bài viết nào với ${hashtagSearch}.`
+                  : searchKeyword
+                  ? `Không tìm thấy bài viết nào phù hợp với từ khóa "${searchKeyword}".`
+                  : 'Chưa có bài viết nào. Hãy tạo bài viết đầu tiên!'}
               </p>
             ) : (
               <>
