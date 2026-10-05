@@ -14,6 +14,7 @@ public class SharedPostDto
     public int LikesCount { get; set; }
     public int CommentsCount { get; set; }
     public List<string> LikedByUserIds { get; set; } = new();
+    public bool IsDeleted { get; set; }
 }
 
 public class PostResponseDto

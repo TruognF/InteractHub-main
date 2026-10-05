@@ -134,7 +134,49 @@ public class PostServiceTests
 
         // Assert
         Assert.True(deleted);
-        Assert.Empty(context.Posts);
+        var fetched = await service.GetByIdAsync(post.Id);
+        Assert.Null(fetched);
+    }
+
+    [Fact]
+    public async Task GetFeedAsync_ShouldMaskSharedPostContent_WhenOriginalPostIsDeleted()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.Create();
+        var user1 = new User { Id = "u1", UserName = "user1", Email = "user1@example.com", FullName = "User One" };
+        var user2 = new User { Id = "u2", UserName = "user2", Email = "user2@example.com", FullName = "User Two" };
+        context.Users.AddRange(user1, user2);
+        await context.SaveChangesAsync();
+
+        var service = new PostService(context);
+        var originalPost = await service.CreateAsync(new Post
+        {
+            Content = "Sensitive original content",
+            UserId = "u1",
+            CreatedAt = DateTime.UtcNow
+        });
+
+        var sharedPost = await service.CreateAsync(new Post
+        {
+            Content = "Sharing this post",
+            UserId = "u2",
+            SharedPostId = originalPost.Id,
+            CreatedAt = DateTime.UtcNow.AddMinutes(5)
+        });
+
+        // Delete original post
+        await service.DeleteAsync(originalPost.Id);
+
+        // Act
+        var (posts, totalCount) = await service.GetFeedAsync(1, 10);
+
+        // Assert
+        Assert.Single(posts); // Only sharedPost is returned (originalPost is soft-deleted)
+        var feedPost = posts[0];
+        Assert.NotNull(feedPost.SharedPost);
+        Assert.True(feedPost.SharedPost.IsDeleted);
+        Assert.NotEqual("Sensitive original content", feedPost.SharedPost.Content);
+        Assert.Equal("Nội dung không khả dụng", feedPost.SharedPost.UserFullName);
     }
 }
 

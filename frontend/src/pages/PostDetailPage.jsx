@@ -358,8 +358,13 @@ export default function PostDetailPage() {
 
                 <div
                   className="original-post-card"
-                  title="Xem bài viết gốc"
-                  onClick={() => navigate('/post/' + post.SharedPost.Id)}
+                  title={post.SharedPost.IsDeleted ? '' : 'Xem bài viết gốc'}
+                  style={{ cursor: post.SharedPost.IsDeleted ? 'default' : 'pointer' }}
+                  onClick={() => {
+                    if (!post.SharedPost.IsDeleted) {
+                      navigate('/post/' + post.SharedPost.Id);
+                    }
+                  }}
                 >
                   <div className="original-post-author">
                     <div className="original-post-avatar">
@@ -400,36 +405,38 @@ export default function PostDetailPage() {
                   )}
                 </div>
 
-                <div className="shared-post-footer">
-                  <div className="shared-post-actions">
-                    <button
-                      type="button"
-                      className={`post-action-btn shared-post-action ${likedPosts.has(post.SharedPost.Id) ? 'liked' : ''}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleLike(post.SharedPost);
-                      }}
-                    >
-                      <span>{likedPosts.has(post.SharedPost.Id) ? '❤️' : '🤍'}</span>
-                      {likedPosts.has(post.SharedPost.Id) ? 'Bỏ thích bài gốc' : 'Thích bài gốc'}
-                    </button>
-                    <button
-                      type="button"
-                      className="post-action-btn shared-post-action"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggleComments(post.SharedPost);
-                      }}
-                    >
-                      <span><i className="fa-solid fa-comments"></i></span> Bình luận bài gốc
-                    </button>
-                  </div>
+                {!post.SharedPost.IsDeleted && (
+                  <div className="shared-post-footer">
+                    <div className="shared-post-actions">
+                      <button
+                        type="button"
+                        className={`post-action-btn shared-post-action ${likedPosts.has(post.SharedPost.Id) ? 'liked' : ''}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleLike(post.SharedPost);
+                        }}
+                      >
+                        <span>{likedPosts.has(post.SharedPost.Id) ? '❤️' : '🤍'}</span>
+                        {likedPosts.has(post.SharedPost.Id) ? 'Bỏ thích bài gốc' : 'Thích bài gốc'}
+                      </button>
+                      <button
+                        type="button"
+                        className="post-action-btn shared-post-action"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleComments(post.SharedPost);
+                        }}
+                      >
+                        <span><i className="fa-solid fa-comments"></i></span> Bình luận bài gốc
+                      </button>
+                    </div>
 
-                  <div className="shared-post-stats">
-                    <span>❤️ {post.SharedPost.LikesCount} lượt thích</span>
-                    <span><i className="fa-solid fa-comments"></i> {post.SharedPost.CommentsCount} bình luận</span>
+                    <div className="shared-post-stats">
+                      <span>❤️ {post.SharedPost.LikesCount} lượt thích</span>
+                      <span><i className="fa-solid fa-comments"></i> {post.SharedPost.CommentsCount} bình luận</span>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {activeCommentPostId === post.SharedPost.Id && (
                   <div className="shared-post-comments">

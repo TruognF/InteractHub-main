@@ -84,21 +84,39 @@ public class PostService : IPostService
             IsShared = p.SharedPostId.HasValue,
             SharedPostId = p.SharedPostId,
             SharedPost = p.SharedPostId.HasValue
-                ? new SharedPostDto
-                {
-                    Id = p.SharedPost!.Id,
-                    Content = p.SharedPost.Content,
-                    ImageUrl = p.SharedPost.ImageUrl,
-                    CreatedAt = p.SharedPost.CreatedAt,
-                    UpdatedAt = p.SharedPost.UpdatedAt,
-                    UserId = p.SharedPost.UserId,
-                    UserName = p.SharedPost.User!.UserName,
-                    UserFullName = p.SharedPost.User!.FullName,
-                    UserProfilePictureUrl = p.SharedPost.User!.ProfilePictureUrl,
-                    LikesCount = p.SharedPost.Likes.Count,
-                    CommentsCount = p.SharedPost.Comments.Count,
-                    LikedByUserIds = p.SharedPost.Likes.Select(l => l.UserId).ToList()
-                }
+                ? (p.SharedPost!.IsDeleted
+                    ? new SharedPostDto
+                    {
+                        Id = p.SharedPost.Id,
+                        Content = "Bài viết này hiện không khả dụng hoặc đã bị người đăng gỡ bỏ.",
+                        ImageUrl = null,
+                        CreatedAt = p.SharedPost.CreatedAt,
+                        UpdatedAt = p.SharedPost.UpdatedAt,
+                        UserId = string.Empty,
+                        UserName = "InteractHub",
+                        UserFullName = "Nội dung không khả dụng",
+                        UserProfilePictureUrl = null,
+                        LikesCount = 0,
+                        CommentsCount = 0,
+                        LikedByUserIds = new List<string>(),
+                        IsDeleted = true
+                    }
+                    : new SharedPostDto
+                    {
+                        Id = p.SharedPost.Id,
+                        Content = p.SharedPost.Content,
+                        ImageUrl = p.SharedPost.ImageUrl,
+                        CreatedAt = p.SharedPost.CreatedAt,
+                        UpdatedAt = p.SharedPost.UpdatedAt,
+                        UserId = p.SharedPost.UserId,
+                        UserName = p.SharedPost.User!.UserName,
+                        UserFullName = p.SharedPost.User!.FullName,
+                        UserProfilePictureUrl = p.SharedPost.User!.ProfilePictureUrl,
+                        LikesCount = p.SharedPost.Likes.Count,
+                        CommentsCount = p.SharedPost.Comments.Count,
+                        LikedByUserIds = p.SharedPost.Likes.Select(l => l.UserId).ToList(),
+                        IsDeleted = false
+                    })
                 : null
         };
 

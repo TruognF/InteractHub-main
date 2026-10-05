@@ -1636,9 +1636,13 @@ export default function HomePage() {
                             padding: '10px',
                             borderRadius: '6px',
                             border: '1px solid #ddd',
-                            cursor: 'pointer'
+                            cursor: post.SharedPost.IsDeleted ? 'default' : 'pointer'
                           }}
-                          onClick={() => navigate('/post/' + post.SharedPost.Id)}
+                          onClick={() => {
+                            if (!post.SharedPost.IsDeleted) {
+                              navigate('/post/' + post.SharedPost.Id);
+                            }
+                          }}
                         >
                           <div style={{
                             display: 'flex',
@@ -1715,46 +1719,50 @@ export default function HomePage() {
                             />
                           )}
 
-                          <div style={{
-                            display: 'flex',
-                            gap: '10px',
-                            marginTop: '8px'
-                          }}>
-                            <button
-                              type="button"
-                              className={`post-action-btn shared-post-action ${likedPosts.has(post.SharedPost.Id) ? 'liked' : ''}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleLike(post.SharedPost);
-                              }}
-                            >
-                              <span>{likedPosts.has(post.SharedPost.Id) ? '❤️' : '🤍'}</span>
-                              {likedPosts.has(post.SharedPost.Id) ? 'Bỏ thích bài gốc' : 'Thích bài gốc'}
-                            </button>
-                            <button
-                              type="button"
-                              className="post-action-btn shared-post-action"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleToggleSharedComments(post.SharedPost);
-                              }}
-                            >
-                              <span><i className="fa-solid fa-comments"></i></span> Bình luận bài gốc
-                            </button>
-                          </div>
+                          {!post.SharedPost.IsDeleted && (
+                            <>
+                              <div style={{
+                                display: 'flex',
+                                gap: '10px',
+                                marginTop: '8px'
+                              }}>
+                                <button
+                                  type="button"
+                                  className={`post-action-btn shared-post-action ${likedPosts.has(post.SharedPost.Id) ? 'liked' : ''}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleLike(post.SharedPost);
+                                  }}
+                                >
+                                  <span>{likedPosts.has(post.SharedPost.Id) ? '❤️' : '🤍'}</span>
+                                  {likedPosts.has(post.SharedPost.Id) ? 'Bỏ thích bài gốc' : 'Thích bài gốc'}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="post-action-btn shared-post-action"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleSharedComments(post.SharedPost);
+                                  }}
+                                >
+                                  <span><i className="fa-solid fa-comments"></i></span> Bình luận bài gốc
+                                </button>
+                              </div>
 
-                          <div style={{
-                            display: 'flex',
-                            gap: '16px',
-                            marginTop: '8px',
-                            paddingTop: '8px',
-                            borderTop: '1px solid #e5e7eb',
-                            fontSize: '12px',
-                            color: '#65676b'
-                          }}>
-                            <span>❤️ {post.SharedPost.LikesCount} lượt thích</span>
-                            <span><i className="fa-solid fa-comments"></i> {post.SharedPost.CommentsCount} bình luận</span>
-                          </div>
+                              <div style={{
+                                display: 'flex',
+                                gap: '16px',
+                                marginTop: '8px',
+                                paddingTop: '8px',
+                                borderTop: '1px solid #e5e7eb',
+                                fontSize: '12px',
+                                color: '#65676b'
+                              }}>
+                                <span>❤️ {post.SharedPost.LikesCount} lượt thích</span>
+                                <span><i className="fa-solid fa-comments"></i> {post.SharedPost.CommentsCount} bình luận</span>
+                              </div>
+                            </>
+                          )}
 
                           {activeCommentPostId === post.SharedPost.Id && (
                             <div style={{ marginTop: '12px' }}>
