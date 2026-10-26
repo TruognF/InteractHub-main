@@ -42,105 +42,131 @@ public class AuthController : ControllerBase
     {
         // ✅ 1️⃣ VALIDATION - Email format
         if (!ValidationHelper.IsValidEmail(registerDto.Email))
+        {
             return this.BadRequestResponse(new List<ApiError> 
             { 
                 ErrorHelper.CreateValidationError("email", "Invalid email format") 
             });
-
-        // ✅ 2️⃣ VALIDATION - Username format (3-20 chars, alphanumeric + underscore)
-        if (!ValidationHelper.IsValidUsername(registerDto.UserName))
-            return this.BadRequestResponse(new List<ApiError> 
-            { 
-                ErrorHelper.CreateValidationError("username", "Username must be 3-20 characters, alphanumeric and underscore only") 
-            });
-
-        // ✅ 3️⃣ VALIDATION - FullName length
-        if (!ValidationHelper.IsValidFullName(registerDto.FullName))
-            return this.BadRequestResponse(new List<ApiError> 
-            { 
-                ErrorHelper.CreateValidationError("fullName", "Full name must be 2-100 characters") 
-            });
-
-        // ✅ 4️⃣ VALIDATION - Password strength
-        if (!ValidationHelper.IsStrongPassword(registerDto.Password))
-        {
-            var passwordStrength = ValidationHelper.GetPasswordStrength(registerDto.Password);
-            var message = passwordStrength < 30 ? "Password is too weak (must contain uppercase, lowercase, number, special char)" :
-                         passwordStrength < 60 ? "Password needs improvement (at least 8 chars)" :
-                         "Password does not meet requirements";
-            
-            return this.BadRequestResponse(new List<ApiError> 
-            { 
-                ErrorHelper.CreateValidationError("password", message) 
-            });
         }
-
-        // 5️⃣ Check xem username đã tồn tại chưa
-        var existingUser = await _userManager.FindByNameAsync(registerDto.UserName);
-        if (existingUser != null)
-            return this.BadRequestResponse(new List<ApiError> 
-            { 
-                ErrorHelper.CreateValidationError("username", "Username already exists") 
-            });
-
-        // 6️⃣ Check xem email đã tồn tại chưa
-        var existingEmail = await _userManager.FindByEmailAsync(registerDto.Email);
-        if (existingEmail != null)
-            return this.BadRequestResponse(new List<ApiError> 
-            { 
-                ErrorHelper.CreateValidationError("email", "Email already registered") 
-            });
-
-        // 7️⃣ Tạo user mới
-        var user = new User
+        else
         {
-            UserName = registerDto.UserName,
-            Email = registerDto.Email,
-            FullName = registerDto.FullName
-        };
-
-        // 8️⃣ Hash password và lưu vào database
-        var result = await _userManager.CreateAsync(user, registerDto.Password);
-        if (!result.Succeeded)
-        {
-            var errors = result.Errors.Select(e => 
-                new ApiError(e.Description, code: AppErrorCodes.VALIDATION_ERROR)
-            ).ToList();
-            return this.BadRequestResponse(errors);
-        }
-
-        // ✅ 9️⃣ Gán role User mặc định cho user mới
-        var roleResult = await _userManager.AddToRoleAsync(user, RoleConstants.User);
-        if (!roleResult.Succeeded)
-        {
-            // Xóa user nếu gán role thất bại
-            await _userManager.DeleteAsync(user);
-            var errors = roleResult.Errors.Select(e => 
-                new ApiError(e.Description, code: AppErrorCodes.INVALID_STATE)
-            ).ToList();
-            return this.BadRequestResponse(errors);
-        }
-
-        // 🔟 Tạo JWT token
-        var token = await GenerateJwtToken(user);
-
-        var authData = new
-        {
-            Token = token,
-            User = new UserResponseDto
+            // ✅ 2️⃣ VALIDATION - Username format (3-20 chars, alphanumeric + underscore)
+            if (!ValidationHelper.IsValidUsername(registerDto.UserName))
             {
-                Id = user.Id,
-                UserName = user.UserName ?? string.Empty,
-                Email = user.Email ?? string.Empty,
-                FullName = user.FullName ?? string.Empty,
-                ProfilePictureUrl = user.ProfilePictureUrl
+                return this.BadRequestResponse(new List<ApiError> 
+                { 
+                    ErrorHelper.CreateValidationError("username", "Username must be 3-20 characters, alphanumeric and underscore only") 
+                });
             }
-        };
+            else
+            {
+                // ✅ 3️⃣ VALIDATION - FullName length
+                if (!ValidationHelper.IsValidFullName(registerDto.FullName))
+                {
+                    return this.BadRequestResponse(new List<ApiError> 
+                    { 
+                        ErrorHelper.CreateValidationError("fullName", "Full name must be 2-100 characters") 
+                    });
+                }
+                else
+                {
+                    // ✅ 4️⃣ VALIDATION - Password strength
+                    if (!ValidationHelper.IsStrongPassword(registerDto.Password))
+                    {
+                        var passwordStrength = ValidationHelper.GetPasswordStrength(registerDto.Password);
+                        var message = passwordStrength < 30 ? "Password is too weak (must contain uppercase, lowercase, number, special char)" :
+                                    passwordStrength < 60 ? "Password needs improvement (at least 8 chars)" :
+                                    "Password does not meet requirements";
+                        
+                        return this.BadRequestResponse(new List<ApiError> 
+                        { 
+                            ErrorHelper.CreateValidationError("password", message) 
+                        });
+                    }
+                    else
+                    {
+                        // 5️⃣ Check xem username đã tồn tại chưa
+                        var existingUser = await _userManager.FindByNameAsync(registerDto.UserName);
+                        if (existingUser != null)
+                        {
+                            return this.BadRequestResponse(new List<ApiError> 
+                            { 
+                                ErrorHelper.CreateValidationError("username", "Username already exists") 
+                            });
+                        }
+                        else
+                        {
+                            // 6️⃣ Check xem email đã tồn tại chưa
+                            var existingEmail = await _userManager.FindByEmailAsync(registerDto.Email);
+                            if (existingEmail != null)
+                            {
+                                return this.BadRequestResponse(new List<ApiError> 
+                                { 
+                                    ErrorHelper.CreateValidationError("email", "Email already registered") 
+                                });
+                            }
+                            else
+                            {
+                                // 7️⃣ Tạo user mới
+                                var user = new User
+                                {
+                                    UserName = registerDto.UserName,
+                                    Email = registerDto.Email,
+                                    FullName = registerDto.FullName
+                                };
 
-        return this.CreatedResponse(authData, "Registration successful");
+                                // 8️⃣ Hash password và lưu vào database
+                                var result = await _userManager.CreateAsync(user, registerDto.Password);
+                                if (!result.Succeeded)
+                                {
+                                    var errors = result.Errors.Select(e => 
+                                        new ApiError(e.Description, code: AppErrorCodes.VALIDATION_ERROR)
+                                    ).ToList();
+                                    return this.BadRequestResponse(errors);
+                                }
+                                else
+                                {
+                                    // ✅ 9️⃣ Gán role User mặc định cho user mới
+                                    var roleResult = await _userManager.AddToRoleAsync(user, RoleConstants.User);
+                                    if (!roleResult.Succeeded)
+                                    {
+                                        // Xóa user nếu gán role thất bại
+                                        await _userManager.DeleteAsync(user);
+                                        var errors = roleResult.Errors.Select(e => 
+                                            new ApiError(e.Description, code: AppErrorCodes.INVALID_STATE)
+                                        ).ToList();
+                                        return this.BadRequestResponse(errors);
+                                    }
+                                    else
+                                    {
+                                        // 🔟 Tạo JWT token
+                                        var token = await GenerateJwtToken(user);
+
+                                        var authData = new
+                                        {
+                                            Token = token,
+                                            User = new UserResponseDto
+                                            {
+                                                Id = user.Id,
+                                                UserName = user.UserName ?? string.Empty,
+                                                Email = user.Email ?? string.Empty,
+                                                FullName = user.FullName ?? string.Empty,
+                                                ProfilePictureUrl = user.ProfilePictureUrl
+                                            }
+                                        };
+
+                                        return this.CreatedResponse(authData, "Registration successful");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
-    // ✅ POST /api/auth/login (User Login ONLY - Admin must use /api/admin/login)
+    // ✅ POST /api/auth/login (User Login ONLY - Admin must use /api/admin/+)
     [HttpPost("login")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
@@ -150,35 +176,47 @@ public class AuthController : ControllerBase
         // 1️⃣ Tìm user theo username
         var user = await _userManager.FindByNameAsync(loginDto.UserName);
         if (user == null)
-            return this.UnauthorizedResponse("Invalid username or password");
-
-        // 🔒 SECURITY: Prevent admin users from logging in via regular endpoint
-        var roles = await _userManager.GetRolesAsync(user);
-        if (roles.Contains(RoleConstants.Admin))
-            return this.UnauthorizedResponse("Admin users must use admin login endpoint");
-
-        // 2️⃣ Kiểm tra password
-        var result = await _signInManager.CheckPasswordSignInAsync(user, loginDto.Password, false);
-        if (!result.Succeeded)
-            return this.UnauthorizedResponse("Invalid username or password");
-
-        // 3️⃣ Tạo JWT token (async)
-        var token = await GenerateJwtToken(user);
-
-        var authData = new
         {
-            Token = token,
-            User = new UserResponseDto
+            return this.UnauthorizedResponse("Invalid username or password");
+        }
+        else
+        {
+            // 🔒 SECURITY: Prevent admin users from logging in via regular endpoint
+            var roles = await _userManager.GetRolesAsync(user);
+            if (roles.Contains(RoleConstants.Admin))
             {
-                Id = user.Id,
-                UserName = user.UserName ?? string.Empty,
-                Email = user.Email ?? string.Empty,
-                FullName = user.FullName ?? string.Empty,
-                ProfilePictureUrl = user.ProfilePictureUrl
+                return this.UnauthorizedResponse("Admin users must use admin login endpoint");
             }
-        };
+            else
+            {
+                // 2️⃣ Kiểm tra password
+                var result = await _signInManager.CheckPasswordSignInAsync(user, loginDto.Password, false);
+                if (!result.Succeeded)
+                {
+                    return this.UnauthorizedResponse("Invalid username or password");
+                }
+                else
+                {
+                    // 3️⃣ Tạo JWT token (async)
+                    var token = await GenerateJwtToken(user);
 
-        return this.SuccessResponse(authData, "Login successful", 200);
+                    var authData = new
+                    {
+                        Token = token,
+                        User = new UserResponseDto
+                        {
+                            Id = user.Id,
+                            UserName = user.UserName ?? string.Empty,
+                            Email = user.Email ?? string.Empty,
+                            FullName = user.FullName ?? string.Empty,
+                            ProfilePictureUrl = user.ProfilePictureUrl
+                        }
+                    };
+
+                    return this.SuccessResponse(authData, "Login successful", 200);
+                }
+            }
+        }
     }
 
     // ✅ Hàm helper để tạo JWT token (bao gồm roles)
